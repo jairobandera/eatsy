@@ -17,6 +17,7 @@ const pool = mysql.createPool({
   password: config.db.password,
   database: config.db.database,
   connectionLimit: config.db.connectionLimit,
+  ssl: config.db.ssl,
   charset: 'utf8mb4_unicode_ci',
   dateStrings: true,
   decimalNumbers: true,
@@ -73,12 +74,16 @@ export async function initDatabase() {
     port: config.db.port,
     user: config.db.user,
     password: config.db.password,
+    ssl: config.db.ssl,
     multipleStatements: true,
   });
   try {
-    await admin.query(
-      `CREATE DATABASE IF NOT EXISTS \`${config.db.database}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
-    );
+    // En servicios administrados la base ya existe y el usuario puede no tener permiso de crearla.
+    await admin
+      .query(`CREATE DATABASE IF NOT EXISTS \`${config.db.database}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`)
+      .catch((err) => {
+        if (err.code !== 'ER_DBACCESS_DENIED_ERROR' && err.code !== 'ER_SPECIFIC_ACCESS_DENIED_ERROR') throw err;
+      });
     await admin.query(`USE \`${config.db.database}\``);
     const schema = fs.readFileSync(path.join(import.meta.dirname, 'schema.sql'), 'utf8');
     await admin.query(schema);
