@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#ff5722">
+  <title>Eatsy · Autoservicio</title>
+  <link rel="icon" href="/img/icono.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/vendor/bootstrap/css/bootstrap.min.css">
+  <link rel="stylesheet" href="/vendor/bootstrap-icons/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/ticket.css">
+  <link rel="stylesheet" href="/css/kiosco.css">
+  <link rel="stylesheet" href="/css/touch-keyboard.css">
+</head>
+<body class="kiosco">
+  <header class="kiosco-hero">
+    <div class="container-xxl d-flex align-items-center gap-3 py-3">
+      <button class="kiosco-logo" id="btn-logo" aria-label="Eatsy"><img src="/img/logo.png" alt="Eatsy"></button>
+      <div class="flex-grow-1">
+        <h1 class="mb-0 fw-bold">¡Hacé tu pedido!</h1>
+        <p class="mb-0 opacity-75 d-none d-sm-block">Elegí, personalizá y pagá en un minuto</p>
+      </div>
+      <div class="kiosco-search d-none d-md-block">
+        <i class="bi bi-search"></i>
+        <input type="search" id="buscar" placeholder="Buscar en el menú..." autocomplete="off" data-tk data-tk-enter="Buscar" data-tk-max="40">
+      </div>
+    </div>
+  </header>
+
+  <nav class="kiosco-cats sticky-top">
+    <div class="container-xxl d-flex align-items-center gap-2 py-2">
+      <div class="chips-scroll flex-grow-1" id="categorias"></div>
+      <select class="form-select form-select-sm w-auto rounded-pill" id="orden" aria-label="Ordenar">
+        <option value="nombre_asc">A → Z</option>
+        <option value="nombre_desc">Z → A</option>
+        <option value="precio_asc">Menor precio</option>
+        <option value="precio_desc">Mayor precio</option>
+      </select>
+    </div>
+  </nav>
+
+  <main class="container-xxl py-4">
+    <div class="row g-4">
+      <section class="col-lg-8 col-xl-9">
+        <div class="d-md-none mb-3 kiosco-search">
+          <i class="bi bi-search"></i>
+          <input type="search" id="buscar-mobile" placeholder="Buscar en el menú..." autocomplete="off" data-tk data-tk-enter="Buscar" data-tk-max="40">
+        </div>
+        <div class="row g-3 g-xl-4" id="productos"></div>
+        <div class="mt-4" id="paginacion"></div>
+      </section>
+      <aside class="col-lg-4 col-xl-3 d-none d-lg-block">
+        <div class="cart-panel card-app sticky-top" id="cart-desktop"></div>
+      </aside>
+    </div>
+  </main>
+
+  <!-- Botón flotante del carrito (móvil/tablet) -->
+  <button class="cart-fab d-lg-none" id="cart-fab" data-bs-toggle="offcanvas" data-bs-target="#cart-offcanvas" aria-controls="cart-offcanvas">
+    <i class="bi bi-bag"></i><span class="ms-2">Mi pedido</span><span class="badge rounded-pill bg-white text-dark ms-2" id="fab-count">0</span>
+    <span class="ms-2 fw-bold" id="fab-total"></span>
+  </button>
+  <div class="offcanvas offcanvas-end" tabindex="-1" id="cart-offcanvas" aria-labelledby="cart-offcanvas-title">
+    <div class="offcanvas-header"><h5 class="offcanvas-title fw-bold" id="cart-offcanvas-title">Mi pedido</h5><button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button></div>
+    <div class="offcanvas-body p-0" id="cart-mobile"></div>
+  </div>
+
+  <!-- Personalizar producto -->
+  <div class="modal fade" id="modal-producto" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content kiosco-modal" id="producto-content"></div></div>
+  </div>
+
+  <!-- Pago -->
+  <div class="modal fade" id="modal-pago" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered"><div class="modal-content kiosco-modal p-2">
+      <div class="modal-body text-center">
+        <h2 class="h3 fw-bold mb-1">¿Cómo querés pagar?</h2>
+        <p class="text-muted mb-4">Total a pagar: <b class="fs-4 text-dark" id="pago-total"></b></p>
+        <div class="row g-3">
+          <div class="col-6"><button class="pay-option w-100" data-metodo="Efectivo"><i class="bi bi-cash-coin"></i><span>Efectivo</span><small>Pagás en caja al retirar</small></button></div>
+          <div class="col-6"><button class="pay-option w-100" data-metodo="Tarjeta"><i class="bi bi-credit-card-2-front"></i><span>Tarjeta</span><small>Débito o crédito en caja</small></button></div>
+        </div>
+        <button class="btn btn-link text-muted mt-3" data-bs-dismiss="modal">Volver al menú</button>
+      </div>
+    </div></div>
+  </div>
+
+  <!-- Resultado -->
+  <div class="modal fade" id="modal-resultado" tabindex="-1" data-bs-backdrop="static" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered"><div class="modal-content kiosco-modal">
+      <div class="modal-body text-center p-4">
+        <i class="bi bi-check-circle-fill text-success display-3"></i>
+        <h2 class="h3 fw-bold mt-2">¡Pedido confirmado!</h2>
+        <p class="text-muted mb-3">Acercate a la caja para abonar y esperá tu código en la pantalla.</p>
+        <div class="ticket mx-auto mb-3" id="ticket-kiosco"></div>
+        <div class="d-flex gap-2 justify-content-center flex-wrap">
+          <button class="btn btn-outline-secondary btn-lg rounded-pill" id="btn-imprimir"><i class="bi bi-printer me-1"></i>Imprimir ticket</button>
+          <button class="btn btn-brand btn-lg rounded-pill" id="btn-nuevo"><i class="bi bi-arrow-repeat me-1"></i>Nuevo pedido</button>
+        </div>
+        <p class="small text-muted mt-3 mb-0">Esta pantalla vuelve al inicio en <span id="cuenta">60</span> s.</p>
+      </div>
+    </div></div>
+  </div>
+
+  <script src="/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+  <script src="/vendor/sweetalert2/sweetalert2.all.min.js"></script>
+  <script src="/vendor/jsbarcode/JsBarcode.all.min.js"></script>
+  <script type="module" src="/js/kiosco/app.js"></script>
+</body>
+</html>

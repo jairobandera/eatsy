@@ -1,0 +1,18 @@
+/* Caja */
+.pago-select { font-weight: 500; border: 0; }
+.pago-select.text-bg-success, .pago-select.text-bg-danger { color: #fff !important; }
+.pago-select option { background: #fff; color: #212529; }
+
+.chips-scroll { display: flex; gap: 0.4rem; overflow-x: auto; padding-bottom: 0.25rem; scrollbar-width: thin; }
+.chip { white-space: nowrap; background: #f1f3f5; border: 1px solid transparent; color: #495057; }
+.chip:hover { background: var(--brand-soft); color: var(--brand-dark); }
+.chip.active { background: var(--brand); color: #fff; }
+
+.product-tile { border: 1px solid transparent; overflow: hidden; transition: transform 0.15s ease, border-color 0.15s ease; }
+.product-tile:hover { transform: translateY(-2px); border-color: var(--brand); }
+.product-tile img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; background: #f1f3f5; }
+
+.cart-list { max-height: 42vh; overflow-y: auto; }
+.qty-group input::-webkit-outer-spin-button, .qty-group input::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+#cliente-resultados:empty { display: none; }

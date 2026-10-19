@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#ff5722">
+  <meta name="robots" content="noindex">
+  <title>Mi pedido · Eatsy</title>
+  <link rel="icon" href="/img/icono.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/vendor/bootstrap/css/bootstrap.min.css">
+  <link rel="stylesheet" href="/vendor/bootstrap-icons/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/seguimiento.css">
+</head>
+<body class="seguimiento">
+  <header class="seg-header">
+    <span class="seg-logo"><img src="/img/logo.png" alt="Eatsy"></span>
+    <div>
+      <h1>Mi pedido</h1>
+      <p>Seguí el estado en tiempo real</p>
+    </div>
+  </header>
+
+  <main class="seg-main">
+    <!-- Paso 1: identificar el pedido -->
+    <section id="vista-form" hidden>
+      <form class="seg-card" id="form" novalidate autocomplete="off">
+        <h2 class="h5 fw-bold mb-1">¿Cuál es tu pedido?</h2>
+        <p class="text-muted small mb-4">Ingresá el código que figura en tu ticket.</p>
+
+        <label class="form-label fw-semibold" for="codigo">Código del pedido</label>
+        <div class="input-group input-group-lg mb-3">
+          <span class="input-group-text fw-bold">PED-</span>
+          <input class="form-control text-uppercase fw-bold" id="codigo" name="codigo" maxlength="8" required
+                 placeholder="AB12" autocapitalize="characters" spellcheck="false" enterkeyhint="next">
+        </div>
+
+        <label class="form-label fw-semibold" for="cedula">Cédula <span class="text-muted fw-normal small">(solo si la diste en la caja)</span></label>
+        <input class="form-control form-control-lg mb-1" id="cedula" name="cedula" inputmode="numeric" maxlength="20" placeholder="Sin puntos ni guiones" enterkeyhint="go">
+        <div class="form-text mb-3" id="cedula-help">Si tu pedido quedó asociado a tu cédula (para sumar puntos) te la vamos a pedir.</div>
+
+        <div class="alert alert-danger py-2 small d-none" id="error" role="alert"></div>
+
+        <button class="btn btn-brand btn-lg w-100 rounded-pill fw-semibold" type="submit" id="btn-ver" data-loading-text="Buscando...">
+          <i class="bi bi-search me-1"></i> Ver mi pedido
+        </button>
+      </form>
+    </section>
+
+    <!-- Paso 2: estado del pedido -->
+    <section id="vista-estado" hidden>
+      <div class="seg-card text-center estado-card" id="estado-card">
+        <div class="small text-muted">Pedido</div>
+        <div class="codigo" id="codigo-actual"></div>
+        <div class="estado-icon" id="estado-icon"></div>
+        <h2 class="estado-titulo" id="estado-titulo"></h2>
+        <p class="estado-texto" id="estado-texto"></p>
+      </div>
+
+      <ol class="pasos seg-card" id="pasos">
+        <li data-paso="Recibido"><span><i class="bi bi-receipt"></i></span>Recibido</li>
+        <li data-paso="En Preparacion"><span><i class="bi bi-fire"></i></span>En preparación</li>
+        <li data-paso="Listo"><span><i class="bi bi-bell"></i></span>¡Listo!</li>
+        <li data-paso="Entregado"><span><i class="bi bi-bag-check"></i></span>Entregado</li>
+      </ol>
+
+      <div class="seg-card" id="avisos">
+        <div class="d-flex align-items-center gap-3">
+          <i class="bi bi-bell-fill fs-3 text-brand"></i>
+          <div class="flex-grow-1">
+            <div class="fw-semibold">Avisos activados</div>
+            <div class="small text-muted" id="avisos-texto">Dejá esta pantalla abierta: va a sonar y vibrar cuando tu pedido esté listo.</div>
+          </div>
+        </div>
+        <button class="btn btn-outline-brand rounded-pill w-100 mt-3" id="btn-activar" hidden><i class="bi bi-volume-up me-1"></i>Tocá para activar el sonido</button>
+      </div>
+
+      <details class="seg-card" id="detalle">
+        <summary class="fw-semibold">Lo que pediste</summary>
+        <ul class="list-unstyled mb-0 mt-2" id="items"></ul>
+      </details>
+
+      <button class="btn btn-link text-muted w-100" id="btn-otro"><i class="bi bi-arrow-repeat me-1"></i>Seguir otro pedido</button>
+      <div class="text-center small text-muted conexion" id="conexion"></div>
+    </section>
+  </main>
+
+  <script type="module" src="/js/seguimiento/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+/* Cocina: tarjetas grandes y legibles a distancia */
+.kitchen-card { overflow: hidden; border-top: 6px solid #20c997; }
+.kitchen-card[data-urgencia='warn'] { border-top-color: #ffc107; }
+.kitchen-card[data-urgencia='late'] { border-top-color: #dc3545; }
+
+.kitchen-head { display: flex; justify-content: space-between; align-items: flex-start; padding: 0.9rem 1rem; background: #fafafa; border-bottom: 1px solid #f1f3f5; }
+.kitchen-code { font-size: 1.35rem; font-weight: 700; letter-spacing: 0.02em; }
+.kitchen-timer { font-weight: 600; padding: 0.15rem 0.6rem; border-radius: 2rem; background: #e6fcf5; color: #087f5b; }
+.kitchen-card[data-urgencia='warn'] .kitchen-timer { background: #fff9db; color: #8a6d00; }
+.kitchen-card[data-urgencia='late'] .kitchen-timer { background: #fff5f5; color: #c92a2a; animation: pulse-dot 1.5s infinite; }
+
+.kitchen-items { padding: 0.75rem 1rem; max-height: 320px; overflow-y: auto; }
+.kitchen-items li { display: flex; gap: 0.75rem; padding: 0.45rem 0; border-bottom: 1px dashed #e9ecef; font-size: 1.05rem; }
+.kitchen-items li:last-child { border-bottom: 0; }
+.kitchen-items .qty { min-width: 2rem; height: 2rem; border-radius: 0.5rem; background: var(--brand); color: #fff; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
+.kitchen-items .sin { color: #c92a2a; font-weight: 600; font-size: 0.9rem; }
+.kitchen-items .extra { color: #087f5b; font-weight: 700; font-size: 0.9rem; }
