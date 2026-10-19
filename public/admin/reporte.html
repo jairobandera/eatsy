@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Reporte de estadísticas · Eatsy</title>
+  <link rel="icon" href="/img/icono.ico">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/vendor/bootstrap/css/bootstrap.min.css">
+  <link rel="stylesheet" href="/vendor/bootstrap-icons/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/reporte.css">
+</head>
+<body>
+  <div class="toolbar no-print">
+    <span><i class="bi bi-info-circle me-1"></i>En el diálogo de impresión elegí <b>“Guardar como PDF”</b>.</span>
+    <button class="btn btn-brand btn-sm rounded-pill px-3" id="btn-print"><i class="bi bi-printer me-1"></i>Imprimir / Guardar PDF</button>
+  </div>
+  <main class="report" id="report">
+    <div class="text-center py-5"><div class="spinner-border"></div></div>
+  </main>
+  <script src="/vendor/sweetalert2/sweetalert2.all.min.js"></script>
+  <script src="/vendor/chartjs/chart.umd.min.js"></script>
+  <script type="module" src="/js/admin/reporte.js"></script>
+</body>
+</html>

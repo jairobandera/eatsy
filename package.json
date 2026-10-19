@@ -1,0 +1,41 @@
+{
+  "name": "autopedido",
+  "version": "2.0.0",
+  "description": "Sistema de autopedido para locales gastronómicos (kiosco, caja, cocina, llamados y administración) con Node.js, Express y WebSocket nativo.",
+  "type": "module",
+  "main": "server.js",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch-path=src --watch-path=server.js server.js",
+    "db:reset": "node src/db/cli.js reset",
+    "db:seed": "node src/db/cli.js seed",
+    "db:demo": "node src/db/cli.js demo",
+    "test": "node --test \"tests/**/*.test.js\""
+  },
+  "keywords": [
+    "autopedido",
+    "restaurante",
+    "kiosco",
+    "express",
+    "websocket"
+  ],
+  "authors": [
+    "Alan Ceballos",
+    "Jairo Bandera"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "bootstrap": "^5.3.3",
+    "bootstrap-icons": "^1.11.3",
+    "chart.js": "^4.4.4",
+    "express": "^5.1.0",
+    "jsbarcode": "^3.11.6",
+    "multer": "^2.0.1",
+    "mysql2": "^3.24.6",
+    "qrcode": "^1.5.4",
+    "sweetalert2": "^11.14.0"
+  }
+}

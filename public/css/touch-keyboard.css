@@ -1,0 +1,45 @@
+/* Teclado en pantalla del kiosco */
+.tk-panel {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 2000;
+  transform: translateY(105%); transition: transform 0.22s ease;
+  background: rgba(33, 37, 41, 0.97); backdrop-filter: blur(6px);
+  padding: 0.6rem 0.75rem calc(0.75rem + env(safe-area-inset-bottom));
+  box-shadow: 0 -0.5rem 1.5rem rgba(0, 0, 0, 0.25); border-radius: 1.25rem 1.25rem 0 0;
+  user-select: none; touch-action: manipulation;
+}
+.tk-panel.tk-open { transform: translateY(0); }
+.tk-inner { max-width: 780px; margin: 0 auto; }
+
+.tk-top { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
+.tk-preview {
+  flex: 1; min-height: 44px; display: flex; align-items: center; padding: 0 1rem; border-radius: 0.75rem;
+  background: #fff; color: #212529; font-size: 1.15rem; font-weight: 600; overflow: hidden; white-space: nowrap;
+}
+.tk-preview.tk-placeholder .tk-text { color: #adb5bd; font-weight: 400; }
+.tk-caret { width: 2px; height: 1.3em; background: var(--brand); margin-left: 2px; animation: tk-blink 1s steps(1) infinite; }
+.tk-placeholder .tk-caret { display: none; }
+@keyframes tk-blink { 50% { opacity: 0; } }
+.tk-close { width: 44px; height: 44px; border: 0; border-radius: 0.75rem; background: #495057; color: #fff; font-size: 1.2rem; }
+
+.tk-row { display: flex; justify-content: center; gap: 0.3rem; margin-bottom: 0.3rem; }
+.tk-row:last-child { margin-bottom: 0; }
+.tk-key {
+  flex: 1 1 0; max-width: 72px; height: clamp(42px, 5.4vh, 50px); border: 0; border-radius: 0.6rem;
+  background: #f8f9fa; color: #212529; font-size: 1.2rem; font-weight: 600;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.35); transition: transform 0.06s ease, background 0.06s ease;
+}
+.tk-key.tk-pressed { transform: translateY(2px); background: #ffe0d6; box-shadow: none; }
+.tk-wide { max-width: 130px; flex-grow: 1.6; font-size: 1rem; }
+.tk-space { max-width: 420px; flex-grow: 5; font-size: 0.95rem; color: #6c757d; }
+.tk-muted { background: #ced4da; }
+.tk-enter { background: var(--brand); color: #fff; }
+.tk-enter.tk-pressed { background: var(--brand-dark); }
+
+/* Modo código (cupones): sin espacio ni Ñ */
+.tk-mode-codigo .tk-space, .tk-mode-codigo [data-tk-key='Ñ'] { visibility: hidden; }
+
+/* Mientras está abierto, la página deja lugar abajo para poder ver todo */
+body.tk-visible { padding-bottom: calc(var(--tk-height, 320px) + 1rem) !important; }
+body.tk-visible .cart-fab { display: none !important; }
+
+@media (prefers-reduced-motion: reduce) { .tk-panel { transition: none; } }

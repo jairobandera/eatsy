@@ -1,0 +1,31 @@
+/* Ticket para impresora térmica de 80 mm (área útil ~76 mm) */
+.ticket-page { background: #e9ecef; }
+.ticket {
+  width: 76mm;
+  margin: 0 auto 2rem;
+  padding: 6mm 4mm;
+  background: #fff;
+  color: #000;
+  font-family: 'Poppins', monospace;
+  font-size: 12px;
+  line-height: 1.35;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.12);
+}
+.ticket img.logo { display: block; max-width: 45mm; margin: 0 auto 2mm; }
+.ticket h1 { font-size: 15px; font-weight: 700; text-align: center; margin: 0 0 1mm; }
+.ticket .codigo { font-size: 20px; font-weight: 700; text-align: center; letter-spacing: 1px; }
+.ticket hr { border: 0; border-top: 1px dashed #000; margin: 3mm 0; opacity: 1; }
+.ticket table { width: 100%; border-collapse: collapse; }
+.ticket td { padding: 0.5mm 0; vertical-align: top; }
+.ticket td.num { text-align: right; white-space: nowrap; padding-left: 2mm; }
+.ticket .sin { font-size: 10px; font-style: italic; }
+.ticket .total td { font-size: 15px; font-weight: 700; padding-top: 1.5mm; }
+.ticket .center { text-align: center; }
+.ticket svg { display: block; margin: 2mm auto 0; max-width: 100%; }
+
+@media print {
+  @page { size: 80mm auto; margin: 0; }
+  .ticket-page { background: #fff; }
+  .no-print { display: none !important; }
+  .ticket { box-shadow: none; margin: 0; padding: 2mm 2mm 6mm; }
+}

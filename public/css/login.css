@@ -1,0 +1,22 @@
+body {
+  background:
+    radial-gradient(circle at 15% 20%, rgba(255, 87, 34, 0.18), transparent 40%),
+    radial-gradient(circle at 85% 80%, rgba(255, 152, 0, 0.18), transparent 40%),
+    var(--bg-app);
+}
+.login-wrap {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+}
+.login-card {
+  width: 100%;
+  max-width: 420px;
+  padding: 2.25rem 2rem;
+  box-shadow: var(--shadow);
+}
+.login-logo { max-width: 140px; }
+.input-group-text { background: #f8f9fa; }

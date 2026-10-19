@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pedidos para retirar · Eatsy</title>
+  <link rel="icon" href="/img/icono.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/vendor/bootstrap/css/bootstrap.min.css">
+  <link rel="stylesheet" href="/vendor/bootstrap-icons/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/llamados.css">
+</head>
+<body class="llamados">
+  <header class="llamados-header">
+    <img src="/img/logo.png" alt="Eatsy" class="logo">
+    <h1>Seguí tu pedido</h1>
+    <div class="text-end">
+      <div class="reloj" id="reloj">--:--</div>
+      <span class="rt-status" id="rt-status" data-status="connecting"><span class="dot"></span><span class="label">Conectando…</span></span>
+    </div>
+  </header>
+
+  <main class="llamados-main">
+    <section class="col-preparando">
+      <h2><i class="bi bi-fire me-2"></i>Preparando</h2>
+      <div class="lista" id="preparando"></div>
+      <aside class="qr-card" id="qr-card" hidden>
+        <div class="qr-img" id="qr-img"></div>
+        <div>
+          <div class="qr-title"><i class="bi bi-phone me-1"></i>Seguí tu pedido desde el celular</div>
+          <p class="qr-text">Escaneá el código, ingresá el número de tu ticket y te avisamos cuando esté listo.</p>
+          <div class="qr-url" id="qr-url"></div>
+        </div>
+      </aside>
+    </section>
+    <section class="col-listos">
+      <h2><i class="bi bi-bell-fill me-2"></i>¡Listos para retirar!</h2>
+      <div class="lista" id="listos"></div>
+    </section>
+  </main>
+
+  <div class="sound-hint" id="sound-hint"><i class="bi bi-volume-up me-2"></i>Tocá la pantalla para activar el sonido</div>
+
+  <script type="module" src="/js/llamados/app.js"></script>
+</body>
+</html>

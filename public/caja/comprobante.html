@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Comprobante · Eatsy</title>
+  <link rel="icon" href="/img/icono.ico">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/vendor/bootstrap/css/bootstrap.min.css">
+  <link rel="stylesheet" href="/vendor/bootstrap-icons/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/ticket.css">
+</head>
+<body class="ticket-page">
+  <div class="no-print text-center py-3">
+    <button class="btn btn-brand rounded-pill px-4" id="btn-print"><i class="bi bi-printer me-1"></i>Imprimir</button>
+    <button class="btn btn-outline-secondary rounded-pill" onclick="window.close()">Cerrar</button>
+  </div>
+  <article class="ticket" id="ticket"><p class="text-center">Cargando...</p></article>
+
+  <script src="/vendor/sweetalert2/sweetalert2.all.min.js"></script>
+  <script src="/vendor/jsbarcode/JsBarcode.all.min.js"></script>
+  <script type="module" src="/js/caja/comprobante.js"></script>
+</body>
+</html>
