@@ -85,10 +85,10 @@ Render no ofrece MySQL, así que la base va en un proveedor aparte. Opción grat
 4. Deploy. Las tablas se crean solas. La URL de Render se usa automáticamente en el QR de seguimiento (`RENDER_EXTERNAL_URL`).
 
 Tené en cuenta:
-- **Plan gratuito**: el servicio se “duerme” tras 15 minutos sin tráfico y tarda ~1 minuto en despertar; las pantallas de caja/cocina/kiosco se reconectan solas, pero para un local funcionando conviene un plan pago.
+- **Plan gratuito**: el servicio se “duerme” tras 15 minutos sin tráfico y tarda ~1 minuto en despertar. Para evitarlo, creá un cron en **[cron-job.org](https://console.cron-job.org/dashboard)** que haga `GET https://TU-APP.onrender.com/api/health` **cada 10 minutos** (responde `{"ok":true}` al instante, sin tocar la base de datos).
 - **Imágenes subidas desde el panel**: el disco de Render se borra en cada deploy/reinicio, así que las fotos subidas como archivo se pierden. Usá el campo **URL de la imagen** (por ejemplo, fotos alojadas en Cloudinary o Imgur) o agregá un *Render Disk* montado en `uploads/` (plan pago). Las fotos de los productos de demo vienen en el repositorio y no se pierden.
 - `SESSION_SECRET` lo genera Render solo; `TRUST_PROXY=1` y `NODE_ENV=production` ya vienen en el blueprint (cookies seguras por HTTPS).
-- Ruta de salud: `/api/salud`.
+- Rutas de salud: `/api/health` (ping liviano para el cron) y `/api/salud` (además verifica la conexión a MySQL; la usa Render como *health check*).
 
 ---
 
