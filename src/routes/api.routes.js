@@ -1,5 +1,5 @@
 import express, { Router } from 'express';
-import { getMe, postLogin, postLogout } from '../controllers/auth.controller.js';
+import { getInfo, getMe, postLogin, postLogout } from '../controllers/auth.controller.js';
 import {
   cajaController,
   catalogoController,
@@ -11,6 +11,8 @@ import {
 import { requireRole } from '../middlewares/auth.js';
 import { qrSeguimiento, seguimientoController } from '../controllers/seguimiento.controller.js';
 import { forbidden } from '../utils/http-error.js';
+import config from '../config/index.js';
+import { sql } from '../db/connection.js';
 import { notFoundApi } from '../middlewares/error-handler.js';
 import { csrfGuard } from '../middlewares/security.js';
 import adminRoutes from './admin.routes.js';
@@ -40,10 +42,21 @@ router.get('/seguimiento', seguimientoController.ver);
 router.delete('/seguimiento', seguimientoController.salir);
 router.get('/publico/seguimiento-qr', qrSeguimiento);
 
+// ── Salud (lo usa Render/Docker para saber si la app y la base responden)
+router.get('/salud', async (_req, res) => {
+  try {
+    await sql.get('SELECT 1 AS ok');
+    res.json({ ok: true, modo: config.appMode });
+  } catch {
+    res.status(503).json({ ok: false, error: 'Sin conexión a la base de datos' });
+  }
+});
+
 // ── Autenticación
 router.post('/auth/login', postLogin);
 router.post('/auth/logout', postLogout);
 router.get('/auth/me', getMe);
+router.get('/auth/info', getInfo);
 
 // ── Público (pantalla de llamados)
 router.get('/publico/llamados', publicoController.llamados);

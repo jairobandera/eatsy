@@ -39,11 +39,22 @@ Comandos útiles:
 |---|---|
 | `npm start` | Inicia el servidor (HTTP + WebSocket en el mismo puerto) |
 | `npm run dev` | Igual, pero se reinicia solo al cambiar archivos del backend |
-| `npm run db:reset` | Borra y recrea todas las tablas con los datos iniciales |
-| `npm run db:demo` | Agrega pedidos de ejemplo de los últimos 14 días (para ver estadísticas) |
+| `npm run db:reset` | Borra y recrea todas las tablas según `APP_MODE` |
+| `npm run db:demo` | Agrega pedidos de ejemplo de los últimos 14 días (solo modo demo) |
 | `npm test` | Tests automáticos (protocolo WebSocket, precios, tokens, validación) |
 
-### Usuarios de prueba (contraseña `123456789`)
+### Modo demo y modo producción
+
+La variable `APP_MODE` decide qué pasa **la primera vez** que la app encuentra la base vacía:
+
+| `APP_MODE` | Qué carga | Para qué |
+|---|---|---|
+| `demo` (por defecto) | 25 productos con fotos, categorías, ingredientes, promociones, clientes, reglas de puntos y usuarios de prueba. El login muestra los usuarios de prueba. | Probar, mostrar, desarrollar |
+| `produccion` | **Todas las tablas vacías** y un único administrador (`ADMIN_USER` / `ADMIN_PASSWORD`). Si no definís la contraseña, se genera una al azar y se muestra **una sola vez** en los logs. | El local real |
+
+Después del primer arranque el modo ya no borra ni agrega nada: cambiar `APP_MODE` en una base con datos no los toca. Para empezar de cero: `npm run db:reset` (en producción pide `npm run db:reset -- --confirmar`).
+
+### Usuarios de prueba — solo modo demo (contraseña `123456789`)
 
 | Usuario | Rol | Pantalla |
 |---|---|---|
@@ -57,6 +68,27 @@ Comandos útiles:
 - **Salir del kiosco:** tocar 5 veces seguidas el logo e ingresar el PIN (`KIOSCO_PIN`, por defecto `4500`).
 
 > 💡 Para probar varios roles a la vez en el mismo navegador usá `localhost:3000` para uno y `127.0.0.1:3000` para otro (las cookies son independientes), o una ventana de incógnito.
+
+---
+
+## ☁️ Desplegar en Render
+
+Render no ofrece MySQL, así que la base va en un proveedor aparte. Opción gratuita recomendada: **[Aiven for MySQL](https://aiven.io/mysql)** (plan *Free*, MySQL 8 real).
+
+1. **Base de datos**: creá el servicio MySQL en Aiven y copiá su *Service URI* (`mysql://avnadmin:CLAVE@HOST:PUERTO/defaultdb?ssl-mode=REQUIRED`).
+2. **Web**: en Render → *New → Blueprint* → elegí este repositorio. Toma la configuración de [`render.yaml`](render.yaml).
+3. Completá las variables que pide:
+   - `DATABASE_URL` → la URI del paso 1 (el SSL se activa solo).
+   - `APP_MODE` → `demo` para mostrarlo con datos de prueba, o `produccion` para el local real.
+   - `ADMIN_PASSWORD` → contraseña del administrador (solo modo producción).
+   - `KIOSCO_PIN` → PIN para salir del kiosco.
+4. Deploy. Las tablas se crean solas. La URL de Render se usa automáticamente en el QR de seguimiento (`RENDER_EXTERNAL_URL`).
+
+Tené en cuenta:
+- **Plan gratuito**: el servicio se “duerme” tras 15 minutos sin tráfico y tarda ~1 minuto en despertar; las pantallas de caja/cocina/kiosco se reconectan solas, pero para un local funcionando conviene un plan pago.
+- **Imágenes subidas desde el panel**: el disco de Render se borra en cada deploy/reinicio, así que las fotos subidas como archivo se pierden. Usá el campo **URL de la imagen** (por ejemplo, fotos alojadas en Cloudinary o Imgur) o agregá un *Render Disk* montado en `uploads/` (plan pago). Las fotos de los productos de demo vienen en el repositorio y no se pierden.
+- `SESSION_SECRET` lo genera Render solo; `TRUST_PROXY=1` y `NODE_ENV=production` ya vienen en el blueprint (cookies seguras por HTTPS).
+- Ruta de salud: `/api/salud`.
 
 ---
 

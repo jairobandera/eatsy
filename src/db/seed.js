@@ -1,3 +1,5 @@
+import crypto from 'node:crypto';
+import config from '../config/index.js';
 import { sql, transaction } from './connection.js';
 import * as data from './seed-data.js';
 import { categoriasRepo, ingredientesRepo, usuariosRepo } from '../repositories/catalogo.repositories.js';
@@ -44,6 +46,38 @@ export async function seedBase() {
     for (const r of data.reglasPuntos) await reglasPuntosRepo.insert(r);
   });
   console.log('✔ Datos base cargados (usuarios, catálogo, promociones, clientes, reglas de puntos).');
+}
+
+/**
+ * Modo producción: todas las tablas vacías y solo el usuario administrador.
+ * La contraseña sale de ADMIN_PASSWORD; si no está definida se genera una al azar
+ * y se muestra UNA vez en la consola (cambiala después desde Admin → Usuarios).
+ */
+export async function seedProduccion() {
+  let password = config.admin.password;
+  let generada = false;
+  if (!password) {
+    password = crypto.randomBytes(9).toString('base64url');
+    generada = true;
+  }
+  if (password.length < 8) throw new Error('ADMIN_PASSWORD debe tener al menos 8 caracteres.');
+
+  await usuariosRepo.insert({ nombre: config.admin.user, contrasena: hashPassword(password), rol: 'Administrador', activo: 1 });
+
+  console.log('✔ Modo producción: base vacía con un único usuario administrador.');
+  console.log(`  Usuario: ${config.admin.user}`);
+  if (generada) {
+    console.log(`  Contraseña generada: ${password}`);
+    console.log('  ⚠ Guardala ahora: no se vuelve a mostrar. Podés cambiarla en Admin → Usuarios.');
+  } else {
+    console.log('  Contraseña: la definida en ADMIN_PASSWORD.');
+  }
+}
+
+/** Carga inicial según APP_MODE (demo = datos de prueba, produccion = solo el admin). */
+export async function seedInicial() {
+  if (config.isDemo) await seedBase();
+  else await seedProduccion();
 }
 
 const rand = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;

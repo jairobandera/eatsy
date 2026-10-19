@@ -1,0 +1,34 @@
+# Despliegue en Render (https://render.com) — "New > Blueprint" y elegí este repositorio.
+# La base de datos MySQL va aparte (Render no ofrece MySQL administrado): ver README → "Desplegar en Render".
+services:
+  - type: web
+    name: eatsy
+    runtime: node
+    plan: free            # para kioscos/cajas reales usá un plan pago: el free se duerme tras 15 min sin uso
+    buildCommand: npm ci --omit=dev
+    startCommand: npm start
+    healthCheckPath: /api/salud
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # demo = arranca con productos/usuarios de prueba · produccion = vacía, solo el admin
+      - key: APP_MODE
+        value: demo
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: TRUST_PROXY
+        value: "1"
+      - key: APP_TIMEZONE
+        value: America/Montevideo
+      # mysql://usuario:clave@host:puerto/base  (te lo da el proveedor de MySQL)
+      - key: DATABASE_URL
+        sync: false
+      - key: DB_SSL
+        value: "true"
+      # Solo para APP_MODE=produccion: usuario y contraseña del administrador inicial
+      - key: ADMIN_USER
+        value: Admin
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: KIOSCO_PIN
+        sync: false

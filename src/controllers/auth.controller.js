@@ -1,3 +1,4 @@
+import config from '../config/index.js';
 import { SESSION_COOKIE, sessionCookieOptions } from '../middlewares/auth.js';
 import { HOME_BY_ROLE, login, verificarPinKiosco } from '../services/auth.service.js';
 import { forbidden, unauthorized } from '../utils/http-error.js';
@@ -26,4 +27,9 @@ export function postLogout(req, res) {
 export function getMe(req, res) {
   if (!req.user) throw unauthorized();
   res.json({ user: req.user, home: HOME_BY_ROLE[req.user.rol] });
+}
+
+/** Información pública para la pantalla de login (si está en modo demo, se muestran los usuarios de prueba). */
+export function getInfo(_req, res) {
+  res.json({ modo: config.appMode });
 }
