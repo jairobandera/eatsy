@@ -23,6 +23,12 @@ export function createApp() {
 
   app.use(securityHeaders);
 
+  // Ping liviano para servicios tipo cron-job.org: mantiene despierta la app en el plan gratis
+  // de Render. Va antes de todo (sin sesión ni base de datos) para responder al instante.
+  app.get('/api/health', (_req, res) => {
+    res.set('Cache-Control', 'no-store').json({ ok: true, uptime: Math.round(process.uptime()) });
+  });
+
   const staticOpts = { index: false, redirect: false, maxAge: config.isProduction ? '7d' : 0 };
 
   // Archivos estáticos (sin exponer los .html directamente: pasan por pages.routes).
