@@ -77,8 +77,8 @@ export const preciosExtra = {
   'Carne de Res': 150, 'Pechuga de Pollo': 120, 'Queso Cheddar': 50, 'Bacon': 70, 'Queso Mozzarella': 50,
   'Huevo': 40, 'Palta': 60, 'Jamón Cocido': 50, 'Jalapeños': 30, 'Pepperoni': 60, 'Queso Parmesano': 40,
   'Queso Feta': 50, 'Aceitunas': 30, 'Tomate': 20, 'Dulce de Leche': 40, 'Frutos Rojos': 50, 'Crema': 30,
-  'Salsa BBQ': 0, 'Mayonesa': 0, 'Ketchup': 0, 'Mostaza': 0, 'Cebolla': 0, 'Lechuga': 0,
 };
+// Sin precio (o en 0) = no se ofrece como extra: solo se puede quitar (salsas, lechuga, cebolla...).
 
 const img = (file) => `/img/productos/${file}`;
 

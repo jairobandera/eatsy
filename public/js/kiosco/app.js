@@ -103,7 +103,7 @@ function abrirProducto(p) {
   let cantidad = 1;
 
   const precioExtras = () => p.ingredientes.reduce((s, i) => s + (extras.get(i.id) || 0) * Number(i.precio_extra || 0), 0);
-  const extraLabel = (i) => (Number(i.precio_extra) ? `+${money(i.precio_extra)} c/u` : 'sin cargo');
+  const extraLabel = (i) => `+${money(i.precio_extra)} c/u`;
 
   content.innerHTML = html`
     <button type="button" class="btn-close position-absolute top-0 end-0 m-3 z-3 bg-white rounded-circle p-2" data-bs-dismiss="modal" aria-label="Cerrar"></button>

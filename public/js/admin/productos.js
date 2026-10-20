@@ -20,8 +20,8 @@ const chips = (list, cls) =>
 function form(p) {
   const catSel = new Set((p?.categorias || []).map((c) => c.id));
   const ingSel = new Map((p?.ingredientes || []).map((i) => [i.id, i]));
-  // El ingrediente solo se puede ofrecer como extra si tiene precio de extra (Admin → Ingredientes).
-  const tienePrecioExtra = (i) => (i.precio_extra_ingrediente ?? i.precio_extra) != null;
+  // El ingrediente solo se puede ofrecer como extra si tiene precio de extra mayor a 0 (Admin → Ingredientes).
+  const tienePrecioExtra = (i) => Number(i.precio_extra_ingrediente ?? i.precio_extra) > 0;
   // Si el producto tiene relaciones deshabilitadas, también las mostramos para no perderlas.
   const cats = [...categorias, ...(p?.categorias || []).filter((c) => !categorias.some((x) => x.id === c.id))];
   const ings = [...ingredientes, ...(p?.ingredientes || []).filter((i) => !ingredientes.some((x) => x.id === i.id))];
