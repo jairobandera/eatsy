@@ -117,9 +117,16 @@ function abrirProducto(p) {
           ? html`<h3 class="h6 fw-semibold mt-1 mb-2">Personalizá tu pedido</h3>
             <ul class="ing-k-list list-unstyled mb-2">${personalizables.map(
               (i) => html`<li class="ing-k" data-ing="${i.id}">
-                <div class="ing-k-name">${i.nombre}${i.es_obligatorio ? html` <i class="bi bi-lock-fill text-muted small" title="Viene siempre"></i>` : ''}</div>
+                <div class="ing-k-name">
+                  <span class="nombre">${i.nombre}</span>${i.es_obligatorio ? html` <i class="bi bi-lock-fill text-muted small" title="Viene siempre"></i>` : ''}
+                  <small class="ing-k-sin">Sin ${i.nombre}</small>
+                </div>
                 <div class="ing-k-actions">
-                  ${i.es_obligatorio ? '' : html`<button type="button" class="ing-quitar" data-quitar="${i.id}" aria-pressed="false"><i class="bi bi-check-lg on"></i><i class="bi bi-x-lg off"></i><span class="on">Con</span><span class="off">Sin</span></button>`}
+                  ${i.es_obligatorio
+                    ? ''
+                    : html`<button type="button" class="ing-quitar" data-quitar="${i.id}" aria-pressed="false" aria-label="Quitar o volver a agregar ${i.nombre}">
+                        <i class="bi bi-x-lg on"></i><span class="on">Quitar</span><i class="bi bi-arrow-counterclockwise off"></i><span class="off">Agregar</span>
+                      </button>`}
                   ${i.precio_extra != null
                     ? html`<div class="extra-k">
                         <span class="extra-k-label">Extra<small>${extraLabel(i)}</small></span>
