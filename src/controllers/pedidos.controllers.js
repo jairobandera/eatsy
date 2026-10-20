@@ -125,6 +125,12 @@ export const cajaController = {
     const { estado } = validate(req.body, { estado: { type: 'enum', required: true, values: ESTADOS_PAGO } });
     res.json(await cambiarEstadoPago(parseId(req.params.id), estado));
   },
+
+  /** Cobro con método (efectivo/tarjeta): lo usa la caja para los pedidos de mesa. */
+  cobrar: async (req, res) => {
+    const { metodo_pago } = validate(req.body, { metodo_pago: pedidoSchema.metodo_pago });
+    res.json(await registrarCobro(parseId(req.params.id), metodo_pago));
+  },
 };
 
 // ───────────── Kiosco (autoservicio) ─────────────
@@ -224,6 +230,10 @@ export const mozoController = {
 export const cajaMesasController = {
   list: async (_req, res) => res.json(await listarMesas()),
   liberar: async (req, res) => res.json(await liberarMesa({ aperturaId: parseId(req.params.id) })),
+  cobrar: async (req, res) => {
+    const { metodo_pago } = validate(req.body, metodoSchema);
+    res.json(await cobrarMesa({ aperturaId: parseId(req.params.id), metodoPago: metodo_pago }));
+  },
 };
 
 // ───────────── Pantalla pública de llamados ─────────────

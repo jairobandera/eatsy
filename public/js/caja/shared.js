@@ -71,6 +71,39 @@ export async function cambiarEstado(pedido, estado) {
   }
 }
 
+/** Pide el método de pago (efectivo / tarjeta) para registrar un cobro. Devuelve null si se cancela. */
+export async function pedirMetodoPago(titulo, total) {
+  const r = await Swal.fire({
+    title: titulo,
+    html: `<p class="mb-0">Total: <b>${money(total)}</b></p>`,
+    icon: 'question',
+    showDenyButton: true,
+    showCancelButton: true,
+    confirmButtonText: '<i class="bi bi-cash me-1"></i>Efectivo',
+    denyButtonText: '<i class="bi bi-credit-card me-1"></i>Tarjeta',
+    cancelButtonText: 'Volver',
+    buttonsStyling: false,
+    customClass: { confirmButton: 'btn btn-success mx-1', denyButton: 'btn btn-primary mx-1', cancelButton: 'btn btn-outline-secondary mx-1' },
+  });
+  if (r.isConfirmed) return 'Efectivo';
+  if (r.isDenied) return 'Tarjeta';
+  return null;
+}
+
+/** Cobra un pedido (de mesa) indicando cómo pagó. */
+export async function cobrarPedido(pedido) {
+  const metodo = await pedirMetodoPago(`¿Cómo pagó ${pedido.codigo}?`, pedido.total);
+  if (!metodo) return null;
+  try {
+    const actualizado = await api.patch(`/caja/pedidos/${pedido.id}/cobrar`, { metodo_pago: metodo });
+    toast(`${pedido.codigo} cobrado (${metodo.toLowerCase()})`);
+    return actualizado;
+  } catch (err) {
+    showError(err, 'No se pudo cobrar');
+    return null;
+  }
+}
+
 export async function cambiarPago(pedido, estado) {
   try {
     const actualizado = await api.patch(`/caja/pedidos/${pedido.id}/pago`, { estado });
