@@ -29,7 +29,16 @@ export function createApp() {
     res.set('Cache-Control', 'no-store').json({ ok: true, uptime: Math.round(process.uptime()) });
   });
 
-  const staticOpts = { index: false, redirect: false, maxAge: config.isProduction ? '7d' : 0 };
+  // JS/CSS sin caché larga: el navegador revalida (ETag → 304) y cada deploy llega al instante.
+  // Imágenes y sonidos sí se cachean (no cambian entre versiones).
+  const staticOpts = {
+    index: false,
+    redirect: false,
+    maxAge: 0,
+    setHeaders: (res, filePath) => {
+      if (config.isProduction && /\.(png|jpe?g|svg|ico|webp|mp3)$/i.test(filePath)) res.set('Cache-Control', 'public, max-age=604800');
+    },
+  };
 
   // Archivos estáticos (sin exponer los .html directamente: pasan por pages.routes).
   app.use((req, res, next) => (req.path.endsWith('.html') ? res.status(404).end() : next()));
