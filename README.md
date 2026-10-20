@@ -109,9 +109,19 @@ Tené en cuenta:
 - **Mozo** (`/mozo`, pensado para el celular): toma pedidos indicando el **número de mesa**; el pedido va **directo a la cocina** y aparece en la caja. Puede agregar más pedidos a una mesa que ya pidió, editar los que todavía no salieron y ve sus mesas abiertas con lo que falta cobrar.
 - Cuando la cocina toca **Listo** en un pedido de mozo, **no va a la pantalla de llamados**: le suena al mozo para que lo lleve. Después el mozo (o el cajero) lo marca **En mesa** (estado nuevo, solo para pedidos de mozo).
 - **Cobro**: el mozo registra el pago en **efectivo o tarjeta**, por pedido o con **Cobrar mesa** (todo lo pendiente de una vez). Una mesa servida y cobrada desaparece sola.
-- **QR del mozo**: cada mozo tiene un QR propio que se crea al dar de alta el usuario. En *Admin → Usuarios → Ver QR* se puede **descargar** (PNG) o **imprimir** (tarjetas con lugar para escribir el número de mesa). El QR lleva un código al azar, no el id del usuario.
+- **Liberar mesa**: cuando los clientes pagaron y se fueron, el mozo (en su pantalla) o el cajero (botón **Mesas** de la caja) la liberan: lo que quedaba se marca "En mesa" y la mesa desaparece. Si hay algo sin cobrar, primero pide cobrarlo.
+- **QR del mozo**: cada mozo tiene un QR propio que se crea al dar de alta el usuario. En *Admin → Usuarios → Ver QR* se puede **descargar** (PNG) o **imprimir** (una tarjeta con lugar para escribir el número de mesa). El QR lleva un código al azar, no el id del usuario.
 - **Cliente en la mesa**: escanea el QR (`/mesa/<código>`), indica su número de mesa (queda recordado en el celular) y ve en vivo el estado de los pedidos de la mesa y el total. Con **Llamar al mozo** le llega un aviso con un sonido discreto (`public/sounds/llamado-mozo.mp3`); hay un freno de un llamado cada 45 s por mesa.
 - Las estadísticas cuentan los pedidos de mozo y toman "En mesa" como entregado.
+
+---
+
+## 🔥 Qué va a la cocina
+
+- Cada categoría tiene el interruptor **"Se prepara en cocina"** (*Admin → Categorías*). Por defecto vienen sin cocina **Bebidas, Bebidas Alcohólicas, Postres y Cafetería**.
+- Un producto va a la cocina solo si **todas** sus categorías lo indican (por ejemplo, un jugo en *Bebidas* y *Menú Infantil* lo despacha la caja).
+- La cocina ve solo lo que tiene que elaborar; en los pedidos mixtos aparece "+N productos a cargo de la caja". En la caja esas líneas llevan la insignia **Caja**.
+- Un pedido sin nada de cocina no se puede mandar a cocina: la caja lo **entrega** directo o, si es de un mozo, lo marca **Listo** y le avisa para que lo lleve.
 
 ---
 
@@ -224,7 +234,8 @@ Todas las rutas que modifican datos requieren la cabecera `X-Requested-With: fet
 | GET/POST/PUT | `/api/caja/pedidos[/:id]` · PATCH `/:id/estado` · PATCH `/:id/pago` | Cajero |
 | GET/POST/PUT | `/api/caja/clientes` · `/api/caja/clientes/cedula/:cedula` | Cajero |
 | GET · PATCH | `/api/cocina/pedidos` · `/api/cocina/pedidos/:id/listo` | Cocina |
-| GET · POST | `/api/mozo/mesas` · POST `/api/mozo/mesas/:mesa/cobrar` | Mozo |
+| GET · POST | `/api/mozo/mesas` · POST `/api/mozo/mesas/:mesa/cobrar` · POST `/api/mozo/mesas/:mesa/liberar` | Mozo |
+| GET · POST | `/api/caja/mesas` · POST `/api/caja/mesas/liberar` | Cajero |
 | GET/POST/PUT | `/api/mozo/pedidos[/:id]` · PATCH `/:id/en-mesa` · PATCH `/:id/cobrar` | Mozo |
 | GET · POST | `/api/mesa/:token[/:mesa]` · POST `/api/mesa/:token/:mesa/llamar` | celular en la mesa (QR del mozo) |
 | GET | `/api/admin/usuarios/:id/qr` (QR del mozo en SVG y PNG) | Admin |

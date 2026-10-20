@@ -13,6 +13,7 @@ import {
   cobrarMesa,
   crearPedido,
   listarLlamados,
+  liberarMesa,
   listarMesas,
   listarPedidosCaja,
   listarPedidosCocina,
@@ -206,6 +207,18 @@ export const mozoController = {
   cobrarMesa: async (req, res) => {
     const { metodo_pago } = validate(req.body, metodoSchema);
     res.json(await cobrarMesa({ usuario: req.user, mesa: mesaParam(req), metodoPago: metodo_pago }));
+  },
+
+  /** Los clientes pagaron y se fueron: la mesa queda libre. */
+  liberarMesa: async (req, res) => res.json(await liberarMesa({ mozoId: req.user.id, mesa: mesaParam(req) })),
+};
+
+/** La caja ve las mesas de todos los mozos y también puede liberarlas. */
+export const cajaMesasController = {
+  list: async (_req, res) => res.json(await listarMesas()),
+  liberar: async (req, res) => {
+    const data = validate(req.body, { mozo_id: { type: 'integer', required: true, min: 1, label: 'mozo' }, mesa: mesaSchema });
+    res.json(await liberarMesa({ mozoId: data.mozo_id, mesa: data.mesa }));
   },
 };
 

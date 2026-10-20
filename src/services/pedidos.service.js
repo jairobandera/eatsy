@@ -59,6 +59,12 @@ function publicarPedido(type, pedido) {
   });
 }
 
+/**
+ * ¿El producto se elabora en la cocina? Sí, salvo que alguna de sus categorías sea "sin cocina"
+ * (bebidas, postres...): esos los prepara y entrega la caja.
+ */
+export const vaACocina = (producto) => (producto.categorias || []).every((c) => c.va_a_cocina !== false);
+
 /** Máximo de unidades extra de un mismo ingrediente por producto. */
 export const MAX_EXTRA = 3;
 
@@ -106,6 +112,7 @@ async function construirLineas(items) {
       precio_unitario: Number(producto.precio),
       descuento: round2(descuento * item.cantidad),
       subtotal: round2((precio_final + extrasUnidad) * item.cantidad),
+      para_cocina: vaACocina(producto),
       quitados,
       extras,
     };
@@ -157,7 +164,8 @@ export async function crearPedido({ usuario, clienteId = null, items, metodoPago
 
   const pedido = await pedidosRepo.findById(pedidoId);
   publicarPedido('pedido:creado', pedido);
-  return enviarACocina ? cambiarEstado(pedidoId, 'En Preparacion') : pedido;
+  // Si no tiene nada para elaborar (solo bebidas, postres...) queda en la caja.
+  return enviarACocina && pedido.requiere_cocina ? cambiarEstado(pedidoId, 'En Preparacion') : pedido;
 }
 
 /**
@@ -184,6 +192,8 @@ export async function actualizarPedido(id, { items, metodoPago, clienteId, codig
     const cambios = { ...totales, metodo_pago: metodoPago };
     if (clienteId !== undefined) cambios.cliente_id = await validarCliente(clienteId);
     if (mesa && actual.origen === 'Mozo') cambios.mesa = mesa;
+    // Si al editar ya no queda nada para elaborar, sale de la cocina y vuelve a la caja.
+    if (actual.estado === 'En Preparacion' && !lineas.some((l) => l.para_cocina)) cambios.estado = 'Recibido';
     await pedidosRepo.update(id, cambios);
     await pedidosRepo.updatePago(id, { monto: total, tipo: metodoPago });
   });
@@ -210,6 +220,9 @@ export async function cambiarEstado(id, estado, { completarPago = false } = {}) 
     const pedido = await pedidosRepo.findById(id, { withDetalles: false, forUpdate: true });
     if (!pedido) throw notFound('Pedido no encontrado.');
     if (estado === 'En Mesa' && pedido.origen !== 'Mozo') throw unprocessable('Solo los pedidos tomados por un mozo pueden quedar "En mesa".');
+    if (estado === 'En Preparacion' && !pedido.requiere_cocina) {
+      throw unprocessable('Este pedido no tiene nada para la cocina: lo prepara y entrega la caja.');
+    }
     await pedidosRepo.update(id, { estado });
     if (ENTREGADOS.includes(estado)) {
       await otorgarPuntos(pedido);
@@ -264,7 +277,7 @@ export function listarPedidosCaja({ vista = 'activos', search, page, perPage }) 
 
 export async function listarPedidosCocina({ order = 'asc' } = {}) {
   const { rows } = await pedidosRepo.list({ estados: ['En Preparacion'], order, withDetalles: true });
-  return rows;
+  return rows.filter((p) => p.requiere_cocina);
 }
 
 /** Pantalla pública: pedidos de hoy en preparación y listos para retirar. */
@@ -301,6 +314,21 @@ export async function pedidoDelMozo(id, usuario, { withDetalles = true } = {}) {
   if (!pedido || pedido.origen !== 'Mozo') throw notFound('Pedido no encontrado.');
   if (usuario.rol !== 'Administrador' && pedido.usuario.id !== usuario.id) throw forbidden('Este pedido lo tomó otro mozo.');
   return pedido;
+}
+
+/**
+ * Libera una mesa cuando los clientes ya pagaron y se fueron: lo que quedó sin marcar
+ * (listo, en preparación, despachado por la caja...) pasa a "En Mesa" y la mesa desaparece.
+ */
+export async function liberarMesa({ mozoId, mesa }) {
+  const [abierta] = await listarMesas({ mozoId, mesa });
+  if (!abierta) throw notFound(`La mesa ${mesa} ya está libre.`);
+  if (abierta.pendiente > 0) {
+    throw conflict(`La mesa ${mesa} todavía debe ${abierta.pendiente.toFixed(2)}. Cobrala antes de liberarla.`, { pendiente: abierta.pendiente });
+  }
+  const abiertos = abierta.pedidos.filter((p) => !ENTREGADOS.includes(p.estado));
+  for (const p of abiertos) await cambiarEstado(p.id, 'En Mesa');
+  return { mesa, liberados: abiertos.length };
 }
 
 /** Cobra de una vez todo lo pendiente de una mesa del mozo. */

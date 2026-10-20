@@ -459,12 +459,13 @@ els.confirmar.addEventListener('click', async () => {
         return;
       }
       const pedido = await api.post(`${BASE}/pedidos`, body);
-      const autoCocina = app.querySelector('#auto-cocina')?.checked;
+      const autoCocina = app.querySelector('#auto-cocina')?.checked && pedido.requiere_cocina;
       if (autoCocina) await api.patch(`/caja/pedidos/${pedido.id}/estado`, { estado: 'En Preparacion' }).catch(showError);
       app.querySelector('#creado-codigo').textContent = pedido.codigo;
       app.querySelector('#creado-info').textContent = MOZO
-        ? `Mesa ${pedido.mesa} · ${money(pedido.total)}`
-        : `${money(pedido.total)} · ${pedido.metodo_pago}${autoCocina ? ' · enviado a cocina' : ''}`;
+        ? `Mesa ${pedido.mesa} · ${money(pedido.total)}${pedido.requiere_cocina ? '' : ' · sin cocina: lo prepara la caja'}`
+        : `${money(pedido.total)} · ${pedido.metodo_pago}${autoCocina ? ' · enviado a cocina' : pedido.requiere_cocina ? '' : ' · sin cocina'}`;
+      if (MOZO) app.querySelector('#modal-creado h2').textContent = pedido.requiere_cocina ? '¡Pedido enviado a cocina!' : '¡Pedido enviado a la caja!';
       const print = app.querySelector('#creado-print');
       if (print) print.onclick = () => abrirComprobante(pedido.id);
       modalCreado.show();

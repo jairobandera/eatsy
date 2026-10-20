@@ -20,7 +20,7 @@ async function withRelations(rows, { soloActivos = false } = {}) {
 
   const [cats, ings] = await Promise.all([
     sql.all(
-      `SELECT cp.producto_id, x.id, x.nombre, x.activo
+      `SELECT cp.producto_id, x.id, x.nombre, x.activo, x.va_a_cocina
          FROM categoria_producto cp JOIN categorias x ON x.id = cp.categoria_id
         WHERE cp.producto_id IN (?) ${activos}
         ORDER BY x.nombre`,
@@ -36,7 +36,9 @@ async function withRelations(rows, { soloActivos = false } = {}) {
   ]);
 
   const byProduct = new Map(rows.map((r) => [r.id, { ...toBool(r, 'activo'), categorias: [], ingredientes: [] }]));
-  for (const c of cats) byProduct.get(c.producto_id).categorias.push({ id: c.id, nombre: c.nombre, activo: Boolean(c.activo) });
+  for (const c of cats) {
+    byProduct.get(c.producto_id).categorias.push({ id: c.id, nombre: c.nombre, activo: Boolean(c.activo), va_a_cocina: Boolean(c.va_a_cocina) });
+  }
   for (const i of ings) {
     byProduct.get(i.producto_id).ingredientes.push({
       id: i.id,

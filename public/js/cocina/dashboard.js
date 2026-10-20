@@ -37,8 +37,12 @@ const pedidos = new Map();
 const minutos = (p) => Math.max(0, Math.floor((Date.now() - new Date(p.created_at.replace(' ', 'T')).getTime()) / 60000));
 const urgencia = (min) => (min >= 20 ? 'late' : min >= 10 ? 'warn' : 'ok');
 
+/** La cocina solo ve lo que se elabora; bebidas, postres, etc. los despacha la caja. */
+const deCocina = (p) => p.detalles.filter((d) => d.para_cocina !== false);
+
 const cardHtml = (p) => {
   const min = minutos(p);
+  const otros = p.detalles.length - deCocina(p).length;
   return html`<div class="col-sm-6 col-lg-4 col-xxl-3" data-id="${p.id}">
     <article class="kitchen-card card-app h-100 d-flex flex-column" data-urgencia="${urgencia(min)}">
       <header class="kitchen-head">
@@ -46,12 +50,13 @@ const cardHtml = (p) => {
         <div class="text-end"><div class="kitchen-timer" data-timer><i class="bi bi-stopwatch me-1"></i>${min} min</div></div>
       </header>
       <ul class="kitchen-items list-unstyled mb-0 flex-grow-1">
-        ${p.detalles.map(
+        ${deCocina(p).map(
           (d) => html`<li><span class="qty">${d.cantidad}</span><div><div class="fw-semibold">${d.producto.nombre}</div>
             ${d.extras?.length ? html`<div class="extra"><i class="bi bi-plus-circle-fill me-1"></i>EXTRA: ${d.extras.map((e) => `${e.cantidad}x ${e.nombre}`).join(', ')}</div>` : ''}
             ${d.quitados.length ? html`<div class="sin"><i class="bi bi-x-circle me-1"></i>SIN: ${d.quitados.map((q) => q.nombre).join(', ')}</div>` : ''}</div></li>`,
         )}
       </ul>
+      ${otros ? html`<div class="px-3 pb-2 small text-muted"><i class="bi bi-cup-straw me-1"></i>+${otros} ${otros === 1 ? 'producto' : 'productos'} a cargo de la caja</div>` : ''}
       <footer class="p-3 pt-0"><button class="btn btn-success w-100 btn-lg rounded-pill" data-listo="${p.id}"><i class="bi bi-check2-circle me-1"></i>Listo</button></footer>
     </article></div>`.toString();
 };
@@ -141,14 +146,15 @@ setInterval(() => {
 
 const rt = createRealtime();
 rt.on('pedido:estado', (p) => {
-  if (p.estado === 'En Preparacion') {
+  if (p.estado === 'En Preparacion' && p.requiere_cocina) {
     if (pedidos.has(p.id)) return upsertCard(p);
     play('pedido');
     upsertCard(p, { nuevo: true });
-    toast(`Nuevo pedido ${p.codigo}`, 'info', { text: p.detalles.map((d) => `${d.cantidad}x ${d.producto.nombre}`).join(', '), timer: 6000 });
+    toast(`Nuevo pedido ${p.codigo}`, 'info', { text: deCocina(p).map((d) => `${d.cantidad}x ${d.producto.nombre}`).join(', '), timer: 6000 });
   } else removeCard(p.id);
 });
 rt.on('pedido:actualizado', (p) => {
+  if (pedidos.has(p.id) && (p.estado !== 'En Preparacion' || !p.requiere_cocina)) return removeCard(p.id);
   if (p.estado === 'En Preparacion' && pedidos.has(p.id)) {
     play('pedido');
     upsertCard(p, { modificado: true });

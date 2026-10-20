@@ -1,7 +1,7 @@
 import { sql } from '../db/connection.js';
 import { createRepository, toBool } from './base.repository.js';
 
-export const categoriasRepo = createRepository({ table: 'categorias' });
+export const categoriasRepo = createRepository({ table: 'categorias', map: (r) => toBool(r, 'activo', 'va_a_cocina') });
 
 export const ingredientesRepo = createRepository({ table: 'ingredientes' });
 

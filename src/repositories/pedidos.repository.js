@@ -10,7 +10,8 @@ const BASE_SELECT = `
          u.nombre AS u_nombre, u.rol AS u_rol,
          c.nombre AS c_nombre, c.apellido AS c_apellido, c.cedula AS c_cedula, c.telefono AS c_telefono, c.puntos AS c_puntos,
          pg.id AS pg_id, pg.tipo AS pg_tipo, pg.monto AS pg_monto, pg.estado AS pg_estado, pg.fecha AS pg_fecha,
-         pp.cantidad AS puntos_generados
+         pp.cantidad AS puntos_generados,
+         (SELECT COUNT(*) FROM detalle_pedido dc WHERE dc.pedido_id = p.id AND dc.para_cocina = 1) AS items_cocina
     FROM pedidos p
     JOIN usuarios u ON u.id = p.usuario_id
     LEFT JOIN clientes c ON c.id = p.cliente_id
@@ -34,6 +35,7 @@ function toDto(r) {
       : null,
     pago: r.pg_id ? { id: r.pg_id, tipo: r.pg_tipo, monto: round2(r.pg_monto), estado: r.pg_estado, fecha: r.pg_fecha } : null,
     puntos_generados: r.puntos_generados ?? null,
+    requiere_cocina: Number(r.items_cocina) > 0,
     cupon: r.cupon_codigo ? { promocion_id: r.promocion_id, codigo: r.cupon_codigo, descuento: round2(r.descuento_cupon) } : null,
   };
 }
@@ -88,6 +90,7 @@ async function attachDetalles(pedidos) {
       precio_unitario: round2(d.precio_unitario),
       descuento: round2(d.descuento),
       subtotal: round2(d.subtotal),
+      para_cocina: Boolean(d.para_cocina),
       quitados: quitadosPorDetalle.get(d.id) || [],
       extras: extrasPorDetalle.get(d.id) || [],
     });
@@ -200,9 +203,9 @@ export const pedidosRepo = {
     return r.insertId;
   },
 
-  async insertDetalle({ pedido_id, producto_id, cantidad, precio_unitario, descuento, subtotal, quitados = [], extras = [] }) {
+  async insertDetalle({ pedido_id, producto_id, cantidad, precio_unitario, descuento, subtotal, para_cocina = true, quitados = [], extras = [] }) {
     const r = await sql.run('INSERT INTO detalle_pedido SET ?', [
-      { pedido_id, producto_id, cantidad, precio_unitario, descuento, subtotal, created_at: now() },
+      { pedido_id, producto_id, cantidad, precio_unitario, descuento, subtotal, para_cocina: para_cocina ? 1 : 0, created_at: now() },
     ]);
     if (quitados.length) {
       await sql.run('INSERT INTO detalle_pedido_ingrediente_quitado (detalle_pedido_id, ingrediente_id) VALUES ?', [
