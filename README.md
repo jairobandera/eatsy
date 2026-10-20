@@ -95,7 +95,7 @@ Tené en cuenta:
 
 ## 🍔 Extras, cupones y teclado táctil
 
-- **Extras de ingredientes**: en *Admin → Ingredientes* cada ingrediente puede tener un **precio como extra** (vacío = no se ofrece, 0 = gratis). En *Admin → Productos*, cada ingrediente del producto tiene el interruptor **Extra** para decidir si en ESE producto se puede pedir más cantidad (ej. carne extra en la hamburguesa sí, en la empanada no; las empanadas vienen sin extras). En el kiosco y en la caja, al elegir un producto se puede pedir hasta **3 unidades extra** de esos ingredientes (ej. 2 carnes más en la hamburguesa). Se cobran aparte de la promoción y se ven en caja, cocina, tickets y seguimiento.
+- **Extras de ingredientes**: en *Admin → Ingredientes* cada ingrediente puede tener un **precio como extra** (vacío o 0 = no se ofrece como extra: el cliente solo lo puede quitar). En *Admin → Productos*, cada ingrediente del producto tiene el interruptor **Extra** para decidir si en ESE producto se puede pedir más cantidad (ej. carne extra en la hamburguesa sí, en la empanada no; las empanadas vienen sin extras). En el kiosco y en la caja, al elegir un producto se puede pedir hasta **3 unidades extra** de esos ingredientes (ej. 2 carnes más en la hamburguesa). Se cobran aparte de la promoción y se ven en caja, cocina, tickets y seguimiento.
 - **Promociones**:
   - *Sin código* → se aplican solas (porcentaje o monto por unidad).
   - *Con código* (solo **monto fijo**) → son **cupones**: el cliente lo ingresa en el kiosco o el cajero en la caja, y se descuenta el monto del **total** del pedido si incluye algún producto de la promoción (nunca más que lo que suman esos productos).

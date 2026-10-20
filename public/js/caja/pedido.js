@@ -198,7 +198,7 @@ function abrirProducto(p) {
               </div>
               ${i.precio_extra != null
                 ? html`<div class="d-flex align-items-center gap-1 small text-nowrap">
-                    <span class="text-success">Extra ${Number(i.precio_extra) ? `+${money(i.precio_extra)}` : 'gratis'}</span>
+                    <span class="text-success">Extra +${money(i.precio_extra)}</span>
                     <div class="btn-group btn-group-sm">
                       <button type="button" class="btn btn-outline-success" data-extra="${i.id}" data-d="-1" aria-label="Menos extra"><i class="bi bi-dash"></i></button>
                       <span class="btn btn-light disabled px-2" data-extra-n="${i.id}">0</span>

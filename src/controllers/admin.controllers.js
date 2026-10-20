@@ -25,6 +25,7 @@ export const ingredientesController = crudController(ingredientesService, {
   schema: {
     nombre: { type: 'string', required: true, maxLength: 255 },
     descripcion: { type: 'string', required: true, maxLength: 500, label: 'descripción' },
+    // Vacío o 0 = no se ofrece como extra (se guarda null): solo se puede quitar.
     precio_extra: { type: 'number', min: 0, max: 999999, label: 'precio como extra' },
   },
 });

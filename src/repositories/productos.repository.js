@@ -48,9 +48,9 @@ async function withRelations(rows, { soloActivos = false } = {}) {
       // Este producto permite pedirlo como extra (ej. carne extra en la hamburguesa sí, en la empanada no).
       permite_extra: Boolean(i.permite_extra),
       // Precio del extra en ESTE producto: null = no se ofrece (el ingrediente no tiene precio de extra
-      // o el producto no lo permite). Kiosco, caja y validación del pedido usan este valor.
-      precio_extra: i.permite_extra ? i.precio_extra : null,
-      precio_extra_ingrediente: i.precio_extra,
+      // mayor a 0, o el producto no lo permite). Kiosco, caja y validación del pedido usan este valor.
+      precio_extra: i.permite_extra && Number(i.precio_extra) > 0 ? i.precio_extra : null,
+      precio_extra_ingrediente: Number(i.precio_extra) > 0 ? i.precio_extra : null,
     });
   }
   return [...byProduct.values()];

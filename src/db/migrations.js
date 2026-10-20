@@ -78,6 +78,10 @@ export async function runMigrations(conn) {
   }
   await addColumn(conn, 'detalle_pedido', 'para_cocina', 'TINYINT(1) NOT NULL DEFAULT 1 AFTER subtotal');
 
+  // Un ingrediente con precio de extra en 0 ya no se ofrece como extra ("gratis" dejó de existir):
+  // sin precio, o en 0, solo se puede quitar.
+  await conn.query('UPDATE ingredientes SET precio_extra = NULL WHERE precio_extra = 0');
+
   // Extras por producto: el mismo ingrediente puede ofrecerse como extra en un producto y en otro no.
   if (await addColumn(conn, 'ingrediente_producto', 'permite_extra', 'TINYINT(1) NOT NULL DEFAULT 1 AFTER es_obligatorio')) {
     // Base existente: las empanadas no llevan extras (se puede cambiar en Admin → Productos).

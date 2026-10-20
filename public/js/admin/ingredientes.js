@@ -15,9 +15,9 @@ createCrudPage({
       label: 'Como extra',
       class: 'text-nowrap',
       render: (i) =>
-        i.precio_extra == null
+        !(Number(i.precio_extra) > 0)
           ? html`<span class="text-muted small">No se ofrece</span>`
-          : html`<span class="badge rounded-pill text-bg-success">+ ${Number(i.precio_extra) ? money(i.precio_extra) : 'gratis'}</span>`,
+          : html`<span class="badge rounded-pill text-bg-success">+ ${money(i.precio_extra)}</span>`,
     },
   ],
   form: (i) => html`
@@ -33,9 +33,9 @@ createCrudPage({
       <label class="form-label fw-medium" for="f-extra">Precio como extra</label>
       <div class="input-group">
         <span class="input-group-text">+ $</span>
-        <input type="number" class="form-control" id="f-extra" name="precio_extra" min="0" step="0.01" value="${i?.precio_extra ?? ''}" placeholder="Vacío = no se ofrece como extra">
+        <input type="number" class="form-control" id="f-extra" name="precio_extra" min="0" step="0.01" value="${i?.precio_extra ?? ''}" placeholder="Vacío o 0 = no se ofrece como extra">
       </div>
-      <div class="form-text">Lo que se cobra por cada unidad extra (ej. una carne más en la hamburguesa). 0 = extra gratis. Se ofrece solo en los productos que ya llevan este ingrediente y lo tienen marcado como <b>Extra</b> (Admin → Productos), hasta 3 por producto.</div>
+      <div class="form-text">Lo que se cobra por cada unidad extra (ej. una carne más en la hamburguesa). Vacío o 0 = no se ofrece como extra: el cliente solo lo puede quitar. Se ofrece solo en los productos que ya llevan este ingrediente y lo tienen marcado como <b>Extra</b> (Admin → Productos), hasta 3 por producto.</div>
     </div>`.toString(),
   read: (form) => ({
     nombre: value(form, 'nombre'),

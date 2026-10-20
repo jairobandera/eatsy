@@ -17,7 +17,12 @@ import { conPrecios } from './pricing.service.js';
 // ───────────── Categorías e ingredientes ─────────────
 export const categoriasService = createCatalogService({ repo: categoriasRepo, entidad: 'categoría', genero: 'a' });
 
-export const ingredientesService = createCatalogService({ repo: ingredientesRepo, entidad: 'ingrediente' });
+export const ingredientesService = createCatalogService({
+  repo: ingredientesRepo,
+  entidad: 'ingrediente',
+  // Precio de extra vacío o 0 = no se ofrece como extra (solo se puede quitar).
+  toRecord: (data) => ('precio_extra' in data ? { ...data, precio_extra: Number(data.precio_extra) > 0 ? data.precio_extra : null } : data),
+});
 
 // ───────────── Usuarios ─────────────
 const usuariosBase = createCatalogService({
