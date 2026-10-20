@@ -21,6 +21,10 @@ const MENUS = {
     { href: '/llamados', icon: 'display', label: 'Llamados', external: true },
   ],
   cocina: [{ href: '/cocina', icon: 'fire', label: 'Pedidos en preparación' }],
+  mozo: [
+    { href: '/mozo', icon: 'grid-3x3-gap', label: 'Mis mesas' },
+    { href: '/mozo/pedido', icon: 'plus-circle', label: 'Nuevo pedido' },
+  ],
 };
 
 
@@ -46,7 +50,7 @@ export async function logout() {
 
 /**
  * Monta la barra de navegación en <header id="app-navbar">.
- * @param {'admin'|'caja'|'cocina'} section
+ * @param {'admin'|'caja'|'cocina'|'mozo'} section
  * @param {{ realtime?: boolean, sound?: boolean }} opts
  */
 export async function mountLayout(section, { realtime = false, sound = false } = {}) {
@@ -69,7 +73,7 @@ export async function mountLayout(section, { realtime = false, sound = false } =
       <div class="container-fluid px-3 px-lg-4">
         <a class="navbar-brand d-flex align-items-center gap-2" href="${links[0].href}">
           <span class="brand-logo"><img src="/img/logo.png" alt="Eatsy"></span>
-          <span class="fw-semibold d-none d-sm-inline">${{ admin: 'Administración', caja: 'Caja', cocina: 'Cocina' }[section]}</span>
+          <span class="fw-semibold d-none d-sm-inline">${{ admin: 'Administración', caja: 'Caja', cocina: 'Cocina', mozo: 'Mozo' }[section]}</span>
         </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMain" aria-controls="navMain" aria-expanded="false" aria-label="Menú">
           <span class="navbar-toggler-icon"></span>

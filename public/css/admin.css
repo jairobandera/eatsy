@@ -48,3 +48,7 @@
 .selected-chips .badge { font-weight: 500; font-size: 0.85rem; }
 .selected-chips .badge button { border: 0; background: transparent; color: inherit; padding: 0 0 0 0.35rem; line-height: 1; }
 .selected-chips { max-height: 120px; overflow-y: auto; }
+
+/* QR de mesas del mozo (Usuarios) */
+.qr-box { width: 240px; max-width: 100%; }
+.qr-box svg { width: 100%; height: auto; display: block; }

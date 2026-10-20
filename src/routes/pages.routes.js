@@ -23,11 +23,15 @@ router.get('/login', (req, res, next) => (req.user ? res.redirect(HOME_BY_ROLE[r
 // Pantalla pública para el monitor de "pedidos listos"
 router.get('/llamados', page('llamados/index.html'));
 
+// Celular del cliente en una mesa (QR del mozo)
+router.get('/mesa/:token', page('mesa/index.html'));
+
 const sections = {
   admin: { roles: ['Administrador'], pages: ['productos', 'categorias', 'ingredientes', 'usuarios', 'promociones', 'reglas-puntos', 'estadisticas', 'reporte'] },
   caja: { roles: ['Cajero'], pages: ['pedido', 'entregados', 'comprobante'] },
   cocina: { roles: ['Cocina'], pages: [] },
   kiosco: { roles: ['Cliente'], pages: [] },
+  mozo: { roles: ['Mozo'], pages: ['pedido'] },
 };
 
 for (const [section, { roles, pages }] of Object.entries(sections)) {

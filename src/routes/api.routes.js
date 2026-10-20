@@ -6,8 +6,10 @@ import {
   clientesController,
   cocinaController,
   kioscoController,
+  mozoController,
   publicoController,
 } from '../controllers/pedidos.controllers.js';
+import { mesaController } from '../controllers/mesa.controller.js';
 import { requireRole } from '../middlewares/auth.js';
 import { qrSeguimiento, seguimientoController } from '../controllers/seguimiento.controller.js';
 import { forbidden } from '../utils/http-error.js';
@@ -28,9 +30,9 @@ router.use((_req, res, next) => {
   next();
 });
 
-// ── Un celular que sigue su pedido solo puede usar la API de seguimiento.
+// ── Un celular que sigue su pedido solo puede usar la API de seguimiento (y la de mesas, si escanea un QR de mesa).
 router.use((req, _res, next) => {
-  if (!req.user && req.seguimientoId && !req.path.startsWith('/seguimiento')) {
+  if (!req.user && req.seguimientoId && !req.path.startsWith('/seguimiento') && !req.path.startsWith('/mesa/')) {
     return next(forbidden('Desde este dispositivo solo podés ver el estado de tu pedido.'));
   }
   next();
@@ -41,6 +43,11 @@ router.post('/seguimiento', seguimientoController.iniciar);
 router.get('/seguimiento', seguimientoController.ver);
 router.delete('/seguimiento', seguimientoController.salir);
 router.get('/publico/seguimiento-qr', qrSeguimiento);
+
+// ── Celular del cliente en una mesa (QR del mozo): ver sus pedidos y llamar al mozo
+router.get('/mesa/:token', mesaController.info);
+router.get('/mesa/:token/:mesa', mesaController.pedidos);
+router.post('/mesa/:token/:mesa/llamar', mesaController.llamar);
 
 // ── Salud (lo usa Render/Docker para saber si la app y la base responden)
 router.get('/salud', async (_req, res) => {
@@ -63,7 +70,7 @@ router.get('/publico/llamados', publicoController.llamados);
 
 // ── Catálogo: kiosco y caja
 const catalogo = Router();
-catalogo.use(requireRole('Cliente', 'Cajero'));
+catalogo.use(requireRole('Cliente', 'Cajero', 'Mozo'));
 catalogo.get('/categorias', catalogoController.categorias);
 catalogo.get('/productos', catalogoController.productos);
 catalogo.get('/productos/:id', catalogoController.producto);
@@ -95,6 +102,18 @@ cocina.get('/pedidos', cocinaController.list);
 cocina.get('/pedidos/:id', cocinaController.get);
 cocina.patch('/pedidos/:id/listo', cocinaController.listo);
 router.use('/cocina', cocina);
+
+// ── Mozo
+const mozo = Router();
+mozo.use(requireRole('Mozo'));
+mozo.get('/mesas', mozoController.mesas);
+mozo.post('/mesas/:mesa/cobrar', mozoController.cobrarMesa);
+mozo.get('/pedidos/:id', mozoController.get);
+mozo.post('/pedidos', mozoController.create);
+mozo.put('/pedidos/:id', mozoController.update);
+mozo.patch('/pedidos/:id/en-mesa', mozoController.enMesa);
+mozo.patch('/pedidos/:id/cobrar', mozoController.cobrar);
+router.use('/mozo', mozo);
 
 // ── Administración
 router.use('/admin', adminRoutes);

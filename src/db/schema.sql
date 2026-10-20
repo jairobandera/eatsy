@@ -6,11 +6,13 @@ CREATE TABLE IF NOT EXISTS usuarios (
   id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   nombre      VARCHAR(100) NOT NULL,
   contrasena  VARCHAR(255) NOT NULL,
-  rol         ENUM('Administrador', 'Cajero', 'Cocina', 'Cliente') NOT NULL,
+  rol         ENUM('Administrador', 'Cajero', 'Cocina', 'Cliente', 'Mozo') NOT NULL,
+  qr_token    VARCHAR(40)  NULL,                 -- QR de las mesas del mozo (/mesa/<token>)
   activo      TINYINT(1)   NOT NULL DEFAULT 1,
   created_at  DATETIME     NOT NULL,
   updated_at  DATETIME     NOT NULL,
-  INDEX idx_usuarios_nombre (nombre)
+  INDEX idx_usuarios_nombre (nombre),
+  UNIQUE KEY uq_usuarios_qr (qr_token)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS clientes (
@@ -102,10 +104,11 @@ CREATE TABLE IF NOT EXISTS pedidos (
   promocion_id    INT UNSIGNED  NULL,            -- cupón aplicado (promoción con código)
   cupon_codigo    VARCHAR(30)   NULL,
   descuento_cupon DECIMAL(10,2) NOT NULL DEFAULT 0,
-  origen      ENUM('Caja', 'Kiosco') NOT NULL,
+  origen      ENUM('Caja', 'Kiosco', 'Mozo') NOT NULL,
+  mesa        SMALLINT UNSIGNED NULL,           -- solo pedidos tomados por un mozo
   total       DECIMAL(10,2) NOT NULL DEFAULT 0,
   metodo_pago ENUM('Efectivo', 'Tarjeta') NOT NULL,
-  estado      ENUM('Cancelado', 'Recibido', 'En Preparacion', 'Listo', 'Entregado') NOT NULL,
+  estado      ENUM('Cancelado', 'Recibido', 'En Preparacion', 'Listo', 'Entregado', 'En Mesa') NOT NULL,
   codigo      VARCHAR(20)   NOT NULL,
   created_at  DATETIME      NOT NULL,
   updated_at  DATETIME      NOT NULL,
@@ -113,6 +116,7 @@ CREATE TABLE IF NOT EXISTS pedidos (
   INDEX idx_pedidos_estado (estado),
   INDEX idx_pedidos_created (created_at),
   INDEX idx_pedidos_updated (updated_at),
+  INDEX idx_pedidos_mesa (usuario_id, mesa),
   CONSTRAINT fk_pedidos_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id),
   CONSTRAINT fk_pedidos_cliente FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

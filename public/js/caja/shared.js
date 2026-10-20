@@ -3,14 +3,20 @@ import { api } from '../core/api.js';
 import { ESTADO_LABEL, PAGO_CLASES, estadoBadge, escapeHtml, formatDateTime, html, money, showError, toast } from '../core/ui.js';
 
 export const ESTADOS = ['Recibido', 'En Preparacion', 'Listo', 'Entregado', 'Cancelado'];
-export const CERRADOS = ['Entregado', 'Cancelado'];
+export const CERRADOS = ['Entregado', 'En Mesa', 'Cancelado'];
+/** Los pedidos de mozo no se retiran en el mostrador: terminan "En mesa". */
+export const estadosPara = (p) => (p.origen === 'Mozo' ? ['Recibido', 'En Preparacion', 'Listo', 'En Mesa', 'Cancelado'] : ESTADOS);
+/** Estado final de un pedido listo: "Entregado" (mostrador) o "En Mesa" (mozo). */
+export const estadoEntrega = (p) => (p.origen === 'Mozo' ? 'En Mesa' : 'Entregado');
 
 export const clienteNombre = (c) => (c ? `${c.nombre} ${c.apellido}` : '');
 
 export const origenBadge = (p) =>
   p.origen === 'Kiosco'
     ? html`<span class="badge rounded-pill text-bg-light border"><i class="bi bi-tablet me-1"></i>Kiosco</span>`
-    : html`<span class="badge rounded-pill text-bg-light border"><i class="bi bi-person-badge me-1"></i>Caja</span>`;
+    : p.origen === 'Mozo'
+      ? html`<span class="badge rounded-pill text-bg-light border" title="Mozo: ${p.usuario?.nombre || ''}"><i class="bi bi-grid-3x3-gap me-1"></i>Mesa ${p.mesa}</span>`
+      : html`<span class="badge rounded-pill text-bg-light border"><i class="bi bi-person-badge me-1"></i>Caja</span>`;
 
 export const lineaQuitados = (d) => (d.quitados.length ? html`<div class="small text-danger">Sin: ${d.quitados.map((q) => q.nombre).join(', ')}</div>` : '');
 export const lineaExtras = (d) =>
@@ -25,7 +31,7 @@ export const abrirComprobante = (id) => window.open(`/caja/comprobante?id=${id}`
  * @returns {Promise<object|null>} pedido actualizado o null si se canceló
  */
 export async function cambiarEstado(pedido, estado) {
-  const pagoPendiente = estado === 'Entregado' && pedido.pago && pedido.pago.estado !== 'Completado';
+  const pagoPendiente = ['Entregado', 'En Mesa'].includes(estado) && pedido.pago && pedido.pago.estado !== 'Completado';
   const label = ESTADO_LABEL[estado] || estado;
 
   const result = await Swal.fire({
@@ -121,7 +127,9 @@ function renderDetalle(p) {
   modalEl.querySelector('#det-body').innerHTML = html`
     <div class="row g-3 mb-3 small">
       <div class="col-sm-6"><div class="text-muted">Creado</div><div class="fw-medium">${formatDateTime(p.created_at)} · ${origenBadge(p)} ${p.usuario.nombre}</div></div>
-      <div class="col-sm-6"><div class="text-muted">Cliente</div><div class="fw-medium">${p.cliente ? `${clienteNombre(p.cliente)} · CI ${p.cliente.cedula}` : 'Sin cliente asociado'}</div></div>
+      ${p.origen === 'Mozo'
+        ? html`<div class="col-sm-6"><div class="text-muted">Mesa</div><div class="fw-medium">Mesa ${p.mesa} · atiende ${p.usuario.nombre}</div></div>`
+        : html`<div class="col-sm-6"><div class="text-muted">Cliente</div><div class="fw-medium">${p.cliente ? `${clienteNombre(p.cliente)} · CI ${p.cliente.cedula}` : 'Sin cliente asociado'}</div></div>`}
       <div class="col-sm-6"><div class="text-muted">Pago</div><div class="fw-medium">${p.metodo_pago} · <span class="badge ${PAGO_CLASES[p.pago?.estado] || ''}">${p.pago?.estado || '-'}</span></div></div>
       ${p.puntos_generados ? html`<div class="col-sm-6"><div class="text-muted">Puntos generados</div><div class="fw-medium"><i class="bi bi-star-fill text-warning"></i> ${p.puntos_generados}</div></div>` : ''}
     </div>
@@ -146,7 +154,11 @@ function renderDetalle(p) {
     <button class="btn btn-outline-secondary rounded-pill me-auto" data-act="print"><i class="bi bi-printer me-1"></i>Comprobante</button>
     ${!cerrado ? html`<a class="btn btn-outline-primary rounded-pill" href="/caja/pedido?id=${p.id}"><i class="bi bi-pencil me-1"></i>Editar</a>` : ''}
     ${p.estado === 'Recibido' ? html`<button class="btn btn-warning rounded-pill" data-act="En Preparacion"><i class="bi bi-fire me-1"></i>Enviar a cocina</button>` : ''}
-    ${!cerrado ? html`<button class="btn btn-success rounded-pill" data-act="Entregado"><i class="bi bi-bag-check me-1"></i>Entregar</button>` : ''}
+    ${!cerrado
+      ? p.origen === 'Mozo'
+        ? html`<button class="btn btn-success rounded-pill" data-act="En Mesa"><i class="bi bi-check2-circle me-1"></i>En mesa</button>`
+        : html`<button class="btn btn-success rounded-pill" data-act="Entregado"><i class="bi bi-bag-check me-1"></i>Entregar</button>`
+      : ''}
     <button class="btn btn-light rounded-pill" data-bs-dismiss="modal">Cerrar</button>`.toString();
 
   footer.onclick = async (e) => {

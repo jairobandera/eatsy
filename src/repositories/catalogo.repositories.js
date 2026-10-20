@@ -8,8 +8,13 @@ export const ingredientesRepo = createRepository({ table: 'ingredientes' });
 export const usuariosRepo = {
   ...createRepository({
     table: 'usuarios',
-    select: 'id, nombre, rol, activo, created_at, updated_at',
+    select: 'id, nombre, rol, qr_token, activo, created_at, updated_at',
   }),
+
+  /** Mozo activo dueño de un QR de mesas (o null). */
+  async findMozoByQrToken(token) {
+    return sql.get(`SELECT id, nombre FROM usuarios WHERE qr_token = ? AND rol = 'Mozo' AND activo = 1`, [String(token)]);
+  },
 
   /** Incluye el hash de la contraseña: solo para autenticación. */
   async findForLogin(nombre) {

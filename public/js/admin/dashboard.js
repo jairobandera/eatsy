@@ -11,7 +11,7 @@ const MODULOS = [
   { href: '/admin/ingredientes', icon: 'egg-fried', titulo: 'Ingredientes', texto: 'Ingredientes que se pueden quitar o pedir extra.' },
   { href: '/admin/promociones', icon: 'percent', titulo: 'Promociones', texto: 'Descuentos automáticos y cupones con código.' },
   { href: '/admin/reglas-puntos', icon: 'star', titulo: 'Reglas de puntos', texto: 'Programa de fidelidad para clientes.' },
-  { href: '/admin/usuarios', icon: 'people', titulo: 'Usuarios', texto: 'Personal y kioscos de autoservicio.' },
+  { href: '/admin/usuarios', icon: 'people', titulo: 'Usuarios', texto: 'Personal, mozos (con su QR) y kioscos.' },
   { href: '/admin/estadisticas', icon: 'bar-chart', titulo: 'Estadísticas', texto: 'Ventas, productos más vendidos y reportes.' },
 ];
 
@@ -40,7 +40,7 @@ try {
   const { resumen: r } = await api.get('/admin/estadisticas');
   app.querySelector('#kpis').innerHTML =
     kpi('Ventas de hoy', money(r.ventas_total), 'cash-coin') +
-    kpi('Pedidos', `${r.pedidos_total} <small class="fs-6 text-muted fw-normal">(${r.pedidos_kiosco} kiosco · ${r.pedidos_caja} caja)</small>`, 'receipt') +
+    kpi('Pedidos', `${r.pedidos_total} <small class="fs-6 text-muted fw-normal">(${r.pedidos_kiosco} kiosco · ${r.pedidos_caja} caja · ${r.pedidos_mozo} mozo)</small>`, 'receipt') +
     kpi('Ticket promedio', money(r.ticket_promedio), 'graph-up') +
     kpi('Cancelados', r.pedidos_cancelados, 'x-circle', 'text-danger');
 } catch {

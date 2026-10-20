@@ -79,7 +79,7 @@ app.querySelector('#search').addEventListener(
 );
 
 const rt = createRealtime();
-rt.on('pedido:estado', (p) => p.estado === 'Entregado' && load());
+rt.on('pedido:estado', (p) => ['Entregado', 'En Mesa'].includes(p.estado) && load());
 rt.onReconnect(load);
 
 load();

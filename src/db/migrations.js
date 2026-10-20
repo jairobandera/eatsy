@@ -21,6 +21,25 @@ async function addColumn(conn, table, column, definition) {
   return true;
 }
 
+/** Redefine una columna ENUM si todavía no tiene el valor indicado (para sumar opciones). */
+async function ensureEnumValue(conn, table, column, value, definition) {
+  const [rows] = await conn.query(
+    'SELECT COLUMN_TYPE AS t FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?',
+    [table, column],
+  );
+  if (!rows.length || rows[0].t.includes(`'${value}'`)) return;
+  await conn.query(`ALTER TABLE \`${table}\` MODIFY COLUMN \`${column}\` ${definition}`);
+  console.log(`  · migración: ${table}.${column} acepta '${value}'`);
+}
+
+async function indexExists(conn, table, index) {
+  const [rows] = await conn.query(
+    'SELECT 1 FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND INDEX_NAME = ?',
+    [table, index],
+  );
+  return rows.length > 0;
+}
+
 /** @param {import('mysql2/promise').Connection} conn conexión ya posicionada en la base */
 export async function runMigrations(conn) {
   // Extras de ingredientes: precio por unidad extra (NULL = no se ofrece como extra).
@@ -38,4 +57,16 @@ export async function runMigrations(conn) {
 
   // Desde esta versión el código solo existe en promociones de monto fijo (cupones).
   await conn.query(`UPDATE promociones SET codigo = NULL WHERE tipo_descuento = 'porcentaje' AND codigo IS NOT NULL`);
+
+  // Mozos: rol nuevo, QR propio para sus mesas, pedidos con número de mesa y estado "En Mesa".
+  await ensureEnumValue(conn, 'usuarios', 'rol', 'Mozo', `ENUM('Administrador', 'Cajero', 'Cocina', 'Cliente', 'Mozo') NOT NULL`);
+  if (await addColumn(conn, 'usuarios', 'qr_token', 'VARCHAR(40) NULL AFTER rol')) {
+    await conn.query('ALTER TABLE usuarios ADD UNIQUE KEY uq_usuarios_qr (qr_token)');
+  }
+  await ensureEnumValue(conn, 'pedidos', 'origen', 'Mozo', `ENUM('Caja', 'Kiosco', 'Mozo') NOT NULL`);
+  await ensureEnumValue(conn, 'pedidos', 'estado', 'En Mesa', `ENUM('Cancelado', 'Recibido', 'En Preparacion', 'Listo', 'Entregado', 'En Mesa') NOT NULL`);
+  await addColumn(conn, 'pedidos', 'mesa', 'SMALLINT UNSIGNED NULL AFTER origen');
+  if (!(await indexExists(conn, 'pedidos', 'idx_pedidos_mesa'))) {
+    await conn.query('ALTER TABLE pedidos ADD INDEX idx_pedidos_mesa (usuario_id, mesa)');
+  }
 }

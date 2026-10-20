@@ -59,8 +59,9 @@ export const ESTADO_CLASES = {
   'En Preparacion': 'text-bg-warning',
   Listo: 'text-bg-info',
   Entregado: 'text-bg-success',
+  'En Mesa': 'text-bg-success',
 };
-export const ESTADO_LABEL = { 'En Preparacion': 'En preparación' };
+export const ESTADO_LABEL = { 'En Preparacion': 'En preparación', 'En Mesa': 'En mesa' };
 export const PAGO_CLASES = { Completado: 'text-bg-success', Pendiente: 'text-bg-warning', Fallido: 'text-bg-danger' };
 
 export const estadoBadge = (estado) =>

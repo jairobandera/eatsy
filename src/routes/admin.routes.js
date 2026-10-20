@@ -9,6 +9,8 @@ import {
   usuariosController,
 } from '../controllers/admin.controllers.js';
 import { requireRole } from '../middlewares/auth.js';
+import { qrMozo } from '../services/mesas.service.js';
+import { parseId } from '../utils/validator.js';
 import { uploadImagenProducto } from '../middlewares/upload.js';
 
 /** Monta las rutas REST estándar de un recurso con baja lógica. */
@@ -28,6 +30,7 @@ router.use(requireRole('Administrador'));
 crud(router, '/categorias', categoriasController);
 crud(router, '/ingredientes', ingredientesController);
 crud(router, '/usuarios', usuariosController);
+router.get('/usuarios/:id/qr', async (req, res) => res.json(await qrMozo(parseId(req.params.id))));
 crud(router, '/productos', productosController, { upload: uploadImagenProducto });
 crud(router, '/promociones', promocionesController);
 

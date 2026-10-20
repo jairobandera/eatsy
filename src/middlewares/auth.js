@@ -53,7 +53,7 @@ export async function loadUser(req, _res, next) {
  * solo puede ver /seguimiento: cualquier otra página lo devuelve ahí.
  */
 export function seguimientoLock(req, res, next) {
-  if (!req.user && req.seguimientoId && req.path !== '/seguimiento') return res.redirect('/seguimiento');
+  if (!req.user && req.seguimientoId && req.path !== '/seguimiento' && !req.path.startsWith('/mesa/')) return res.redirect('/seguimiento');
   next();
 }
 

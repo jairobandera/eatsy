@@ -17,6 +17,7 @@ const ESTADOS = {
   'En Preparacion': { icon: 'fire', titulo: 'Estamos preparando tu pedido', texto: 'Te avisamos apenas esté listo.' },
   Listo: { icon: 'bell-fill', titulo: '¡Tu pedido está listo!', texto: 'Acercate al mostrador a retirarlo.' },
   Entregado: { icon: 'bag-check-fill', titulo: '¡Que lo disfrutes!', texto: 'Tu pedido ya fue entregado. ¡Gracias por elegirnos!' },
+  'En Mesa': { icon: 'bag-check-fill', titulo: '¡Buen provecho!', texto: 'Tu pedido ya está en tu mesa. ¡Gracias por elegirnos!' },
   Cancelado: { icon: 'x-circle-fill', titulo: 'Pedido cancelado', texto: 'Si tenés dudas, consultá en la caja.' },
 };
 const ORDEN = ['Recibido', 'En Preparacion', 'Listo', 'Entregado'];
@@ -56,7 +57,7 @@ function mostrarEstado(p, { avisar = true } = {}) {
 
   // Pasos
   const pasos = $('pasos');
-  const idx = ORDEN.indexOf(p.estado);
+  const idx = ORDEN.indexOf(p.estado === 'En Mesa' ? 'Entregado' : p.estado);
   pasos.classList.toggle('cancelado', p.estado === 'Cancelado');
   pasos.querySelectorAll('li').forEach((li, i) => {
     li.classList.toggle('hecho', idx >= 0 && i < idx);
@@ -72,7 +73,7 @@ function mostrarEstado(p, { avisar = true } = {}) {
     )
     .join('');
 
-  const terminado = ['Entregado', 'Cancelado'].includes(p.estado);
+  const terminado = ['Entregado', 'En Mesa', 'Cancelado'].includes(p.estado);
   $('avisos').hidden = terminado || p.estado === 'Listo';
   if (terminado) {
     rt?.close();

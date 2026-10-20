@@ -27,7 +27,7 @@ export const estadisticasRepo = {
          FROM detalle_pedido d
          JOIN pedidos p ON p.id = d.pedido_id
          JOIN productos pr ON pr.id = d.producto_id
-        WHERE p.estado = 'Entregado' AND p.created_at BETWEEN ? AND ?
+        WHERE p.estado IN ('Entregado', 'En Mesa') AND p.created_at BETWEEN ? AND ?
         GROUP BY pr.id, pr.nombre ORDER BY total_vendido DESC, importe DESC LIMIT ?`,
       [desde, hasta, limit],
     );
@@ -40,7 +40,7 @@ export const estadisticasRepo = {
          JOIN pedidos p ON p.id = d.pedido_id
          JOIN categoria_producto cp ON cp.producto_id = d.producto_id
          JOIN categorias c ON c.id = cp.categoria_id
-        WHERE p.estado = 'Entregado' AND p.created_at BETWEEN ? AND ?
+        WHERE p.estado IN ('Entregado', 'En Mesa') AND p.created_at BETWEEN ? AND ?
         GROUP BY c.id, c.nombre ORDER BY total_vendido DESC`,
       [desde, hasta],
     );
@@ -62,10 +62,11 @@ export const estadisticasRepo = {
       ),
       sql.get(
         `SELECT COUNT(*) AS total,
-                COALESCE(SUM(estado = 'Entregado'), 0) AS entregados,
+                COALESCE(SUM(estado IN ('Entregado', 'En Mesa')), 0) AS entregados,
                 COALESCE(SUM(estado = 'Cancelado'), 0) AS cancelados,
                 COALESCE(SUM(origen = 'Kiosco'), 0) AS kiosco,
-                COALESCE(SUM(origen = 'Caja'), 0) AS caja
+                COALESCE(SUM(origen = 'Caja'), 0) AS caja,
+                COALESCE(SUM(origen = 'Mozo'), 0) AS mozo
            FROM pedidos WHERE created_at BETWEEN ? AND ?`,
         [desde, hasta],
       ),

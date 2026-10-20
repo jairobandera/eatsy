@@ -46,6 +46,7 @@ const DEMO_USERS = [
   ['Cajero1', 'Caja'],
   ['Cocina1', 'Cocina'],
   ['Kiosco1', 'Kiosco'],
+  ['Mozo1', 'Mozo'],
 ];
 api
   .get('/auth/info')

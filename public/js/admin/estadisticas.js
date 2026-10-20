@@ -79,7 +79,7 @@ async function load() {
     const metodo = (t) => r.por_metodo.find((m) => m.tipo === t)?.total || 0;
     app.querySelector('#kpis').innerHTML =
       kpi('Ventas', money(r.ventas_total), 'cash-coin', `Efectivo ${money(metodo('Efectivo'))} · Tarjeta ${money(metodo('Tarjeta'))}`) +
-      kpi('Pedidos', r.pedidos_total, 'receipt', `${r.pedidos_kiosco} kiosco · ${r.pedidos_caja} caja`) +
+      kpi('Pedidos', r.pedidos_total, 'receipt', `${r.pedidos_kiosco} kiosco · ${r.pedidos_caja} caja · ${r.pedidos_mozo} mozo`) +
       kpi('Ticket promedio', money(r.ticket_promedio), 'graph-up', `${r.pagos_completados} pagos completados`) +
       kpi('Entregados / cancelados', `${r.pedidos_entregados} / ${r.pedidos_cancelados}`, 'check2-circle', `${formatDate(start.value)} → ${formatDate(end.value)}`);
     renderCharts(data);

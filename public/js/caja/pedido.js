@@ -6,9 +6,19 @@ import { confirmDialog, debounce, escapeHtml, html, money, renderPagination, sho
 import { abrirComprobante, clienteNombre } from './shared.js';
 import { initClientes } from './clientes.js';
 
-await mountLayout('caja', { realtime: true });
+/**
+ * Toma de pedidos. La usan la caja (/caja/pedido) y el mozo (/mozo/pedido):
+ * el mozo indica la mesa en lugar del cliente, no elige el pago (se registra al cobrar)
+ * y el pedido va directo a la cocina.
+ */
+const MOZO = location.pathname.startsWith('/mozo');
+const BASE = MOZO ? '/mozo' : '/caja';
+await mountLayout(MOZO ? 'mozo' : 'caja', { realtime: true, sound: MOZO });
 const app = document.getElementById('app');
-const editId = Number(new URLSearchParams(location.search).get('id')) || null;
+const params = new URLSearchParams(location.search);
+const editId = Number(params.get('id')) || null;
+const MAX_MESA = 999;
+const mesaValida = (n) => Number.isInteger(n) && n >= 1 && n <= MAX_MESA;
 
 const AUTO_COCINA_KEY = 'ap_caja_auto_cocina';
 const leerAutoCocina = () => {
@@ -22,7 +32,7 @@ const leerAutoCocina = () => {
 app.innerHTML = `
   <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
     <h1 class="page-title h3"><i class="bi bi-${editId ? 'pencil-square' : 'plus-circle'} text-brand me-2"></i><span id="titulo">${editId ? 'Editar pedido' : 'Nuevo pedido'}</span></h1>
-    <a href="/caja" class="btn btn-outline-secondary rounded-pill"><i class="bi bi-arrow-left me-1"></i>Volver a pedidos</a>
+    <a href="${BASE}" class="btn btn-outline-secondary rounded-pill"><i class="bi bi-arrow-left me-1"></i>${MOZO ? 'Volver a mis mesas' : 'Volver a pedidos'}</a>
   </div>
 
   <div class="row g-4">
@@ -53,7 +63,7 @@ app.innerHTML = `
             <div class="d-flex justify-content-between align-items-center mb-3">
               <span class="fw-semibold">Total</span><span class="fs-4 fw-bold" id="total">$ 0,00</span>
             </div>
-            <div class="mb-3">
+            ${MOZO ? '' : `<div class="mb-3">
               <div class="small fw-medium mb-1">Método de pago</div>
               <div class="btn-group w-100" role="group" aria-label="Método de pago">
                 <input type="radio" class="btn-check" name="metodo" id="m-efectivo" value="Efectivo" checked>
@@ -61,13 +71,13 @@ app.innerHTML = `
                 <input type="radio" class="btn-check" name="metodo" id="m-tarjeta" value="Tarjeta">
                 <label class="btn btn-outline-brand" for="m-tarjeta"><i class="bi bi-credit-card me-1"></i>Tarjeta</label>
               </div>
-            </div>
-            ${editId ? '' : `<div class="form-check form-switch mb-3">
+            </div>`}
+            ${editId || MOZO ? '' : `<div class="form-check form-switch mb-3">
               <input class="form-check-input" type="checkbox" role="switch" id="auto-cocina" ${leerAutoCocina() ? 'checked' : ''}>
               <label class="form-check-label small" for="auto-cocina">Enviar a cocina al confirmar</label>
             </div>`}
             <button class="btn btn-brand w-100 rounded-pill py-2 fw-semibold" id="confirmar" disabled data-loading-text="Guardando...">
-              <i class="bi bi-check2-circle me-1"></i>${editId ? 'Guardar cambios' : 'Confirmar pedido'}
+              <i class="bi bi-${MOZO && !editId ? 'fire' : 'check2-circle'} me-1"></i>${editId ? 'Guardar cambios' : MOZO ? 'Enviar a cocina' : 'Confirmar pedido'}
             </button>
           </div>
         </div>
@@ -83,14 +93,14 @@ app.innerHTML = `
     <div class="modal-dialog modal-dialog-centered"><div class="modal-content text-center">
       <div class="modal-body p-4">
         <i class="bi bi-check-circle-fill text-success display-4"></i>
-        <h2 class="h4 fw-bold mt-2">¡Pedido creado!</h2>
+        <h2 class="h4 fw-bold mt-2">${MOZO ? '¡Pedido enviado a cocina!' : '¡Pedido creado!'}</h2>
         <p class="mb-1 text-muted">Código</p>
         <p class="display-6 fw-bold text-brand mb-1" id="creado-codigo"></p>
         <p class="text-muted small" id="creado-info"></p>
       </div>
       <div class="modal-footer justify-content-center flex-wrap">
-        <button class="btn btn-outline-secondary rounded-pill" id="creado-print"><i class="bi bi-printer me-1"></i>Comprobante</button>
-        <a class="btn btn-outline-primary rounded-pill" href="/caja"><i class="bi bi-list-ul me-1"></i>Ver pedidos</a>
+        ${MOZO ? '' : '<button class="btn btn-outline-secondary rounded-pill" id="creado-print"><i class="bi bi-printer me-1"></i>Comprobante</button>'}
+        <a class="btn btn-outline-primary rounded-pill" href="${BASE}"><i class="bi bi-list-ul me-1"></i>${MOZO ? 'Ver mis mesas' : 'Ver pedidos'}</a>
         <button class="btn btn-brand rounded-pill" id="creado-otro"><i class="bi bi-plus-lg me-1"></i>Otro pedido</button>
       </div>
     </div></div>
@@ -389,51 +399,74 @@ app.querySelector('#auto-cocina')?.addEventListener('change', (e) => {
   }
 });
 
-// ───────────── Cliente ─────────────
-const clientes = initClientes(app.querySelector('#panel-cliente'), (cliente) => {
-  state.cliente = cliente;
-});
+// ───────────── Cliente (caja) o mesa (mozo) ─────────────
+let clientes = null;
+let mesaInput = null;
+if (MOZO) {
+  app.querySelector('#panel-cliente').innerHTML = html`
+    <label class="form-label fw-semibold mb-1" for="mesa"><i class="bi bi-grid-3x3-gap me-1"></i>Mesa</label>
+    <input type="number" class="form-control form-control-lg fw-bold" id="mesa" min="1" max="${MAX_MESA}" inputmode="numeric" placeholder="Número de mesa" value="${params.get('mesa') || ''}">`.toString();
+  mesaInput = app.querySelector('#mesa');
+} else {
+  clientes = initClientes(app.querySelector('#panel-cliente'), (cliente) => {
+    state.cliente = cliente;
+  });
+}
 
 // ───────────── Confirmar ─────────────
 els.confirmar.addEventListener('click', async () => {
   if (!state.carrito.length) return;
-  const metodo = app.querySelector('[name=metodo]:checked').value;
+  const metodo = app.querySelector('[name=metodo]:checked')?.value ?? 'Efectivo';
   const total = totalPedido();
+  const mesa = Number(mesaInput?.value);
+  if (MOZO && !mesaValida(mesa)) {
+    mesaInput.classList.add('is-invalid');
+    mesaInput.focus();
+    return toast('Indicá el número de mesa', 'warning');
+  }
+  mesaInput?.classList.remove('is-invalid');
 
   const ok = await confirmDialog({
-    title: editId ? '¿Guardar los cambios?' : '¿Confirmar el pedido?',
-    html: `<p class="mb-1">Total: <b>${money(total)}</b> en <b>${metodo}</b></p>
+    title: editId ? '¿Guardar los cambios?' : MOZO ? `¿Enviar el pedido de la mesa ${mesa} a la cocina?` : '¿Confirmar el pedido?',
+    html: MOZO
+      ? `<p class="mb-0">Total: <b>${money(total)}</b></p>`
+      : `<p class="mb-1">Total: <b>${money(total)}</b> en <b>${metodo}</b></p>
       <p class="mb-0 small text-muted">${state.cliente ? `Cliente: ${escapeHtml(clienteNombre(state.cliente))}` : 'Sin cliente asociado (no suma puntos).'}</p>`,
-    confirmText: editId ? 'Guardar' : 'Confirmar',
+    confirmText: editId ? 'Guardar' : MOZO ? 'Enviar' : 'Confirmar',
   });
   if (!ok) return;
 
-  const body = {
-    items: state.carrito.map((it) => ({
-      id: it.id,
-      cantidad: it.cantidad,
-      quitados: it.quitados.map((q) => q.id),
-      extras: it.extras.map((e) => ({ id: e.id, cantidad: e.cantidad })),
-    })),
+  const items = state.carrito.map((it) => ({
+    id: it.id,
+    cantidad: it.cantidad,
+    quitados: it.quitados.map((q) => q.id),
+    extras: it.extras.map((e) => ({ id: e.id, cantidad: e.cantidad })),
+  }));
+  const codigoCupon = state.cupon && descuentoCupon() > 0 ? state.cupon.codigo : null;
+  const body = MOZO ? { mesa, items, codigo_cupon: codigoCupon } : {
+    items,
     metodo_pago: metodo,
     cliente_id: state.cliente?.id ?? null,
-    codigo_cupon: state.cupon && descuentoCupon() > 0 ? state.cupon.codigo : null,
+    codigo_cupon: codigoCupon,
   };
 
   await withLoading(els.confirmar, async () => {
     try {
       if (editId) {
-        await api.put(`/caja/pedidos/${editId}`, body);
+        await api.put(`${BASE}/pedidos/${editId}`, body);
         toast('Pedido actualizado');
-        setTimeout(() => (location.href = '/caja'), 600);
+        setTimeout(() => (location.href = BASE), 600);
         return;
       }
-      const pedido = await api.post('/caja/pedidos', body);
+      const pedido = await api.post(`${BASE}/pedidos`, body);
       const autoCocina = app.querySelector('#auto-cocina')?.checked;
       if (autoCocina) await api.patch(`/caja/pedidos/${pedido.id}/estado`, { estado: 'En Preparacion' }).catch(showError);
       app.querySelector('#creado-codigo').textContent = pedido.codigo;
-      app.querySelector('#creado-info').textContent = `${money(pedido.total)} · ${pedido.metodo_pago}${autoCocina ? ' · enviado a cocina' : ''}`;
-      app.querySelector('#creado-print').onclick = () => abrirComprobante(pedido.id);
+      app.querySelector('#creado-info').textContent = MOZO
+        ? `Mesa ${pedido.mesa} · ${money(pedido.total)}`
+        : `${money(pedido.total)} · ${pedido.metodo_pago}${autoCocina ? ' · enviado a cocina' : ''}`;
+      const print = app.querySelector('#creado-print');
+      if (print) print.onclick = () => abrirComprobante(pedido.id);
       modalCreado.show();
     } catch (err) {
       if (err.data?.cupon_invalido) {
@@ -448,7 +481,7 @@ els.confirmar.addEventListener('click', async () => {
 app.querySelector('#creado-otro').addEventListener('click', () => {
   state.carrito = [];
   state.cupon = null;
-  clientes.set(null);
+  clientes?.set(null);
   renderCarrito();
   modalCreado.hide();
   app.querySelector('#buscar').focus();
@@ -457,10 +490,10 @@ app.querySelector('#creado-otro').addEventListener('click', () => {
 // ───────────── Modo edición ─────────────
 async function cargarPedido() {
   try {
-    const p = await api.get(`/caja/pedidos/${editId}`);
-    if (['Entregado', 'Cancelado'].includes(p.estado)) {
+    const p = await api.get(`${BASE}/pedidos/${editId}`);
+    if (['Entregado', 'En Mesa', 'Cancelado'].includes(p.estado)) {
       await showError(new Error(`El pedido ${p.codigo} está ${p.estado.toLowerCase()} y no se puede editar.`));
-      location.href = '/caja';
+      location.href = BASE;
       return;
     }
     app.querySelector('#titulo').textContent = `Editar pedido ${p.codigo}`;
@@ -472,8 +505,10 @@ async function cargarPedido() {
       quitados: d.quitados,
       extras: d.extras.map((e) => ({ id: e.id, nombre: e.nombre, cantidad: e.cantidad })),
     }));
-    app.querySelector(`[name=metodo][value="${p.metodo_pago}"]`).checked = true;
-    clientes.set(p.cliente);
+    const radio = app.querySelector(`[name=metodo][value="${p.metodo_pago}"]`);
+    if (radio) radio.checked = true;
+    clientes?.set(p.cliente);
+    if (mesaInput) mesaInput.value = p.mesa ?? '';
     if (p.cupon) {
       // Recuperamos los productos del cupón para recalcular; si venció, se avisa y se quita.
       state.cupon = await api.post('/catalogo/cupon', { codigo: p.cupon.codigo }).catch(() => {
@@ -489,6 +524,8 @@ async function cargarPedido() {
 
 // Si el admin cambia precios/productos, refrescamos el catálogo.
 createRealtime().on('catalogo:actualizado', () => cargarProductos());
+// El mozo sigue recibiendo los avisos (pedido listo, mesa que llama) mientras toma un pedido.
+if (MOZO) import('../mozo/avisos.js').then((m) => m.iniciarAvisosMozo());
 
 renderCarrito();
 await cargarCategorias();
