@@ -106,12 +106,14 @@ Tené en cuenta:
 
 ## 🍽️ Mozos y mesas
 
+- **Abrir mesa**: cuando se sienta un cliente, el mozo toca **Nueva mesa** y la mesa queda creada (aunque todavía no tenga pedidos) con un **código de 4 números** para el celular del cliente. Un número de mesa lo atiende un solo mozo a la vez. Si se toma un pedido para una mesa que no estaba abierta, se abre sola.
 - **Mozo** (`/mozo`, pensado para el celular): toma pedidos indicando el **número de mesa**; el pedido va **directo a la cocina** y aparece en la caja. Puede agregar más pedidos a una mesa que ya pidió, editar los que todavía no salieron y ve sus mesas abiertas con lo que falta cobrar.
 - Cuando la cocina toca **Listo** en un pedido de mozo, **no va a la pantalla de llamados**: le suena al mozo para que lo lleve. Después el mozo (o el cajero) lo marca **En mesa** (estado nuevo, solo para pedidos de mozo).
-- **Cobro**: el mozo registra el pago en **efectivo o tarjeta**, por pedido o con **Cobrar mesa** (todo lo pendiente de una vez). Una mesa servida y cobrada desaparece sola.
-- **Liberar mesa**: cuando los clientes pagaron y se fueron, el mozo (en su pantalla) o el cajero (botón **Mesas** de la caja) la liberan: lo que quedaba se marca "En mesa" y la mesa desaparece. Si hay algo sin cobrar, primero pide cobrarlo.
+- **Cobro**: el mozo registra el pago en **efectivo o tarjeta**, por pedido o con **Cobrar mesa** (todo lo pendiente de una vez).
+- **Liberar mesa**: la mesa queda en pantalla hasta que el mozo (en su pantalla) o el cajero (botón **Mesas** de la caja) la liberan, cuando los clientes pagaron y se fueron. Lo que quedaba se marca "En mesa" y la mesa desaparece. Si hay algo sin cobrar, primero pide cobrarlo.
 - **QR del mozo**: cada mozo tiene un QR propio que se crea al dar de alta el usuario. En *Admin → Usuarios → Ver QR* se puede **descargar** (PNG) o **imprimir** (una tarjeta con lugar para escribir el número de mesa). El QR lleva un código al azar, no el id del usuario.
-- **Cliente en la mesa**: escanea el QR (`/mesa/<código>`), indica su número de mesa (queda recordado en el celular) y ve en vivo el estado de los pedidos de la mesa y el total. Con **Llamar al mozo** le llega un aviso con un sonido discreto (`public/sounds/llamado-mozo.mp3`); hay un freno de un llamado cada 45 s por mesa.
+- **Cliente en la mesa**: escanea el QR (`/mesa/<token>`) e ingresa su **número de mesa y el código** que le da el mozo. Ve en vivo el estado de los pedidos de la mesa y el total. Con **Llamar al mozo** le llega un aviso con un sonido discreto (`public/sounds/llamado-mozo.mp3`); hay un freno de un llamado cada 45 s por mesa.
+- **Seguridad del QR**: sin el código no se ve ni se llama a nada. El acceso del celular (cookie `ap_mesa`) vale solo para esa apertura de la mesa: al liberarla deja de servir, así que con el link guardado en casa no se puede espiar ni molestar. Hay un freno de 15 intentos fallidos por mesa (y 30 por IP) cada 10 minutos.
 - Las estadísticas cuentan los pedidos de mozo y toman "En mesa" como entregado.
 
 ---
@@ -234,10 +236,11 @@ Todas las rutas que modifican datos requieren la cabecera `X-Requested-With: fet
 | GET/POST/PUT | `/api/caja/pedidos[/:id]` · PATCH `/:id/estado` · PATCH `/:id/pago` | Cajero |
 | GET/POST/PUT | `/api/caja/clientes` · `/api/caja/clientes/cedula/:cedula` | Cajero |
 | GET · PATCH | `/api/cocina/pedidos` · `/api/cocina/pedidos/:id/listo` | Cocina |
-| GET · POST | `/api/mozo/mesas` · POST `/api/mozo/mesas/:mesa/cobrar` · POST `/api/mozo/mesas/:mesa/liberar` | Mozo |
-| GET · POST | `/api/caja/mesas` · POST `/api/caja/mesas/liberar` | Cajero |
+| GET · POST | `/api/mozo/mesas` (POST abre una mesa vacía) · POST `/api/mozo/mesas/:mesa/cobrar` · POST `/api/mozo/mesas/:mesa/liberar` | Mozo |
+| GET · POST | `/api/caja/mesas` · POST `/api/caja/mesas/:id/liberar` | Cajero |
 | GET/POST/PUT | `/api/mozo/pedidos[/:id]` · PATCH `/:id/en-mesa` · PATCH `/:id/cobrar` | Mozo |
-| GET · POST | `/api/mesa/:token[/:mesa]` · POST `/api/mesa/:token/:mesa/llamar` | celular en la mesa (QR del mozo) |
+| GET · POST | `/api/mesa/:token` · POST `/api/mesa/:token/ingresar` (mesa + código) | celular en la mesa (QR del mozo) |
+| GET · POST · DELETE | `/api/mesa` · POST `/api/mesa/llamar` (con la cookie de la mesa) | celular en la mesa |
 | GET | `/api/admin/usuarios/:id/qr` (QR del mozo en SVG y PNG) | Admin |
 | GET | `/api/publico/llamados` · `/api/publico/seguimiento-qr` | público |
 | POST · GET · DELETE | `/api/seguimiento` (identificarse con código/cédula, ver estado, dejar de seguir) | celular del cliente |

@@ -5,10 +5,13 @@
 
 .mesa-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; padding: 0.8rem 1rem; background: #fafafa; border-bottom: 1px solid #f1f3f5; }
 .mesa-num { font-size: 1.4rem; font-weight: 700; line-height: 1.1; }
+.mesa-codigo { display: inline-block; margin-top: 0.3rem; font-size: 0.85rem; padding: 0.1rem 0.55rem; border-radius: 2rem; background: var(--brand-soft); color: var(--brand-dark); }
+.mesa-codigo b { letter-spacing: 0.12em; font-size: 1rem; }
 
 .pedido-mesa { padding: 0.75rem 1rem; border-bottom: 1px dashed #e9ecef; }
 .pedido-mesa:last-child { border-bottom: 0; }
 .pedido-mesa.listo { background: #e6fcf5; }
+.pedido-mesa.terminado { opacity: 0.55; }
 .pedido-mesa .min-w-0 { min-width: 0; }
 .text-truncate-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 

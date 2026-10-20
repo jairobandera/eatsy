@@ -6,6 +6,7 @@ import { parseCookies, verifyToken } from '../utils/token.js';
 
 export const SESSION_COOKIE = 'ap_session';
 export const SEGUIMIENTO_COOKIE = 'ap_seguimiento';
+export const MESA_COOKIE = 'ap_mesa';
 
 export function sessionCookieOptions() {
   return {
@@ -30,6 +31,12 @@ export function readSeguimiento(req) {
   return payload?.typ === 'seguimiento' && Number.isInteger(payload.pid) ? payload.pid : null;
 }
 
+/** Id de la mesa abierta a la que entró el celular con su código (o null). Si la mesa se libera, deja de valer. */
+export function readMesaAcceso(req) {
+  const payload = verifyToken(parseCookies(req.headers.cookie)[MESA_COOKIE]);
+  return payload?.typ === 'mesa' && Number.isInteger(payload.aid) ? payload.aid : null;
+}
+
 export function seguimientoCookieOptions(horas) {
   return { httpOnly: true, sameSite: 'lax', secure: config.isProduction, path: '/', maxAge: horas * 3600 * 1000 };
 }
@@ -44,7 +51,10 @@ export async function loadUser(req, _res, next) {
     const user = await usuariosRepo.findById(session.id);
     if (user?.activo && user.rol === session.rol) req.user = { id: user.id, nombre: user.nombre, rol: user.rol };
   }
-  if (!req.user) req.seguimientoId = readSeguimiento(req);
+  if (!req.user) {
+    req.seguimientoId = readSeguimiento(req);
+    req.mesaAccesoId = readMesaAcceso(req);
+  }
   next();
 }
 

@@ -46,7 +46,7 @@ export function toSeguimientoDto(p) {
 /** Lo que ve el celular de una mesa (QR del mozo): igual que el seguimiento, más mesa y si está pago. */
 export function toMesaDto(p) {
   const { cliente, ...base } = toSeguimientoDto(p);
-  return { ...base, mesa: p.mesa, mozo_id: p.usuario.id, pagado: p.pago?.estado === 'Completado' };
+  return { ...base, mesa: p.mesa, mesa_abierta_id: p.mesa_abierta_id, pagado: p.pago?.estado === 'Completado' };
 }
 
 const CERRADOS = ['Entregado', 'En Mesa', 'Cancelado'];

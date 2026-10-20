@@ -8,24 +8,24 @@ import { WebSocketServer } from './server.js';
  *  - Pantalla pública de llamados (sin sesión): datos mínimos y enmascarados.
  *  - Celular de un cliente siguiendo su pedido: SOLO los cambios de ese pedido.
  *  - Mozo: solo los pedidos que tomó él y los llamados de sus mesas.
- *  - Celular en una mesa (QR del mozo): solo los pedidos de esa mesa.
+ *  - Celular en una mesa (entró con el QR del mozo y el código de la mesa): solo los pedidos de esa mesa.
  */
 const STAFF = new Set(['Administrador', 'Cajero', 'Cocina']);
-const MAX_MESA = 999;
 
 let wss = null;
 
 /**
- * @param {{authenticate: Function, seguimiento?: Function, resolverMesa?: (token:string)=>Promise<number|null>}} opts
- *        resolverMesa: id del mozo dueño de un QR de mesas (o null si no es válido).
+ * @param {{authenticate: Function, seguimiento?: Function, mesa?: Function}} opts
+ *        seguimiento / mesa: id del pedido o de la mesa abierta que habilita la cookie del celular (o null).
  */
-export function initRealtime(httpServer, { authenticate, seguimiento = () => null, resolverMesa = async () => null }) {
+export function initRealtime(httpServer, { authenticate, seguimiento = () => null, mesa = () => null }) {
   wss = new WebSocketServer({ path: '/ws', authenticate });
   wss.attach(httpServer);
 
   wss.on('connection', (conn, req) => {
     conn.seguimientoId = conn.user ? null : seguimiento(req);
-    conn.send({ type: 'conectado', data: { rol: conn.user?.rol ?? (conn.seguimientoId ? 'Seguimiento' : 'Publico') } });
+    conn.mesaId = conn.user ? null : mesa(req);
+    conn.send({ type: 'conectado', data: { rol: conn.user?.rol ?? (conn.mesaId ? 'Mesa' : conn.seguimientoId ? 'Seguimiento' : 'Publico') } });
 
     conn.on('message', (text) => {
       let msg;
@@ -35,26 +35,15 @@ export function initRealtime(httpServer, { authenticate, seguimiento = () => nul
         return;
       }
       if (msg?.type === 'ping') conn.send({ type: 'pong', data: { t: Date.now() } });
-      // El celular de una mesa se suscribe con el QR del mozo y el número de mesa.
-      if (msg?.type === 'mesa:seguir' && !conn.user) suscribirMesa(conn, msg.data, resolverMesa);
     });
   });
 
   return wss;
 }
 
-async function suscribirMesa(conn, data, resolverMesa) {
-  const mesa = Number(data?.mesa);
-  if (typeof data?.token !== 'string' || data.token.length > 40 || !Number.isInteger(mesa) || mesa < 1 || mesa > MAX_MESA) return;
-  const mozoId = await resolverMesa(data.token).catch(() => null);
-  if (!mozoId) return conn.send({ type: 'mesa:invalida', data: {} });
-  conn.mesa = { mozoId, mesa };
-  conn.send({ type: 'mesa:suscripto', data: { mesa } });
-}
-
 function audienceOf(client) {
   const rol = client.user?.rol;
-  if (!rol) return client.mesa ? 'mesa' : client.seguimientoId ? 'seguimiento' : 'publico';
+  if (!rol) return client.mesaId ? 'mesa' : client.seguimientoId ? 'seguimiento' : 'publico';
   if (STAFF.has(rol)) return 'staff';
   if (rol === 'Mozo') return 'mozo';
   return 'kiosco';
@@ -64,9 +53,9 @@ function audienceOf(client) {
  * Publica un evento.
  * @param {string} type  nombre del evento (ej. 'pedido:estado')
  * @param {{staff?: any, kiosco?: any, publico?: any, seguimiento?: {id:number}, mozo?: {mozo_id:number},
- *          mesa?: {mozo_id:number, mesa:number}}} payloads datos por audiencia.
+ *          mesa?: {mesa_abierta_id:number}}} payloads datos por audiencia.
  *        `seguimiento` solo llega al celular que sigue ese pedido (mismo id);
- *        `mozo` solo al mozo indicado y `mesa` solo a los celulares de esa mesa de ese mozo.
+ *        `mozo` solo al mozo indicado y `mesa` solo a los celulares que entraron a esa mesa abierta.
  */
 export function publish(type, payloads) {
   if (!wss) return;
@@ -76,7 +65,7 @@ export function publish(type, payloads) {
     if (data === undefined) return null;
     if (audience === 'seguimiento' && data.id !== client.seguimientoId) return null;
     if (audience === 'mozo' && data.mozo_id !== client.user.id) return null;
-    if (audience === 'mesa' && (data.mozo_id !== client.mesa.mozoId || data.mesa !== client.mesa.mesa)) return null;
+    if (audience === 'mesa' && data.mesa_abierta_id !== client.mesaId) return null;
     return { type, data };
   });
 }

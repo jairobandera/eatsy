@@ -54,3 +54,18 @@ test('cocina: un producto va a la cocina salvo que alguna categoría sea "sin co
   assert.equal(vaACocina({ categorias: [{ va_a_cocina: false }, { va_a_cocina: true }] }), false);
   assert.equal(vaACocina({ categorias: [] }), true);
 });
+
+test('mesa: código de 4 dígitos y token de acceso que no vale como sesión ni seguimiento', async () => {
+  const { codigoCorrecto } = await import('../src/services/mesas.service.js');
+  const { readMesaAcceso, readSeguimiento, readSession } = await import('../src/middlewares/auth.js');
+  assert.ok(codigoCorrecto('4821', '4821'));
+  assert.ok(codigoCorrecto(' 48-21 ', '4821'));
+  assert.ok(!codigoCorrecto('4820', '4821'));
+  assert.ok(!codigoCorrecto('', '4821'));
+  const req = (cookie) => ({ headers: { cookie } });
+  const acceso = createToken({ typ: 'mesa', aid: 7 });
+  assert.equal(readMesaAcceso(req(`ap_mesa=${acceso}`)), 7);
+  assert.equal(readSession(req(`ap_session=${acceso}`)), null);
+  assert.equal(readSeguimiento(req(`ap_seguimiento=${acceso}`)), null);
+  assert.equal(readMesaAcceso(req(`ap_mesa=${createToken({ id: 1, rol: 'Mozo' })}`)), null);
+});

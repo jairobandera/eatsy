@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import { transaction } from '../db/connection.js';
 import { clientesRepo, reglasPuntosRepo } from '../repositories/clientes.repository.js';
+import { mesasRepo } from '../repositories/mesas.repository.js';
 import { pedidosRepo } from '../repositories/pedidos.repository.js';
 import { productosRepo } from '../repositories/productos.repository.js';
 import { badRequest, conflict, forbidden, notFound, unprocessable } from '../utils/http-error.js';
@@ -55,7 +56,7 @@ function publicarPedido(type, pedido) {
     publico: cambioVisible && !deMozo ? toPublicDto(pedido) : undefined,
     seguimiento: cambioVisible ? toSeguimientoDto(pedido) : undefined,
     mozo: deMozo ? { ...pedido, mozo_id: pedido.usuario.id } : undefined,
-    mesa: deMozo ? toMesaDto(pedido) : undefined,
+    mesa: pedido.mesa_abierta_id ? toMesaDto(pedido) : undefined,
   });
 }
 
@@ -142,6 +143,8 @@ async function validarCliente(clienteId) {
 export async function crearPedido({ usuario, clienteId = null, items, metodoPago, origen, mesa = null, enviarACocina = false, codigoCupon = null, ip }) {
   if (!items?.length) throw badRequest('El pedido debe tener al menos un producto.');
   if (origen === 'Mozo' && !mesa) throw unprocessable('Indicá el número de mesa.');
+  // El pedido del mozo queda en la mesa abierta (si no estaba abierta, se abre ahora).
+  const apertura = origen === 'Mozo' ? await abrirMesa({ mozo: usuario, numero: mesa }) : null;
 
   const pedidoId = await transaction(async () => {
     const lineas = await construirLineas(items);
@@ -151,7 +154,8 @@ export async function crearPedido({ usuario, clienteId = null, items, metodoPago
       usuario_id: usuario.id,
       cliente_id: await validarCliente(clienteId),
       origen,
-      mesa: origen === 'Mozo' ? mesa : null,
+      mesa: apertura?.numero ?? null,
+      mesa_abierta_id: apertura?.id ?? null,
       metodo_pago: metodoPago,
       estado: 'Recibido',
       codigo: await generarCodigo(),
@@ -191,7 +195,10 @@ export async function actualizarPedido(id, { items, metodoPago, clienteId, codig
 
     const cambios = { ...totales, metodo_pago: metodoPago };
     if (clienteId !== undefined) cambios.cliente_id = await validarCliente(clienteId);
-    if (mesa && actual.origen === 'Mozo') cambios.mesa = mesa;
+    if (mesa && actual.origen === 'Mozo' && mesa !== actual.mesa) {
+      const apertura = await abrirMesa({ mozo: actual.usuario, numero: mesa });
+      Object.assign(cambios, { mesa: apertura.numero, mesa_abierta_id: apertura.id });
+    }
     // Si al editar ya no queda nada para elaborar, sale de la cocina y vuelve a la caja.
     if (actual.estado === 'En Preparacion' && !lineas.some((l) => l.para_cocina)) cambios.estado = 'Recibido';
     await pedidosRepo.update(id, cambios);
@@ -292,20 +299,48 @@ export async function listarLlamados() {
 
 // ───────────── Mozos ─────────────
 
-/** Mesas abiertas agrupadas: [{ mesa, mozo, pedidos, total, pendiente }]. mozoId null = todas (administrador). */
-export async function listarMesas({ mozoId = null, mesa } = {}) {
-  const pedidos = await pedidosRepo.deMesasAbiertas({ mozoId, mesa, cerrados: ENTREGADOS, hoy: today() });
-  const porMesa = new Map();
-  for (const p of pedidos) {
-    const key = `${p.usuario.id}:${p.mesa}`;
-    if (!porMesa.has(key)) porMesa.set(key, { mesa: p.mesa, mozo: { id: p.usuario.id, nombre: p.usuario.nombre }, pedidos: [] });
-    porMesa.get(key).pedidos.push(p);
-  }
-  return [...porMesa.values()].map((m) => ({
-    ...m,
-    total: round2(m.pedidos.reduce((s, p) => s + p.total, 0)),
-    pendiente: round2(m.pedidos.filter((p) => p.pago?.estado !== 'Completado').reduce((s, p) => s + p.total, 0)),
-  }));
+const nuevoCodigoMesa = () => String(crypto.randomInt(0, 10000)).padStart(4, '0');
+
+/**
+ * Abre una mesa (aunque todavía no tenga pedidos) o devuelve la que ya tiene abierta ese mozo.
+ * El número es único entre las mesas abiertas: si la atiende otro mozo, error.
+ */
+export async function abrirMesa({ mozo, numero }) {
+  const id = await transaction(async () => {
+    const abierta = await mesasRepo.findAbiertaPorNumero(numero, { forUpdate: true });
+    if (abierta) {
+      if (abierta.mozo.id !== mozo.id) throw conflict(`La mesa ${numero} ya la atiende ${abierta.mozo.nombre}.`);
+      return abierta.id;
+    }
+    return mesasRepo.abrir({ mozoId: mozo.id, numero, codigo: nuevoCodigoMesa() });
+  });
+  return mesasRepo.findById(id);
+}
+
+/** Mesas abiertas con sus pedidos: [{ id, mesa, codigo, mozo, pedidos, total, pendiente }]. mozoId null = todas. */
+export async function listarMesas({ mozoId = null, aperturas } = {}) {
+  const mesas = aperturas ?? (await mesasRepo.listAbiertas({ mozoId }));
+  const pedidos = await pedidosRepo.deAperturas(mesas.map((m) => m.id));
+  return mesas.map((m) => {
+    const propios = pedidos.filter((p) => p.mesa_abierta_id === m.id);
+    return {
+      id: m.id,
+      mesa: m.numero,
+      codigo: m.codigo,
+      abierta_at: m.abierta_at,
+      mozo: m.mozo,
+      pedidos: propios,
+      total: round2(propios.reduce((s, p) => s + p.total, 0)),
+      pendiente: round2(propios.filter((p) => p.pago?.estado !== 'Completado').reduce((s, p) => s + p.total, 0)),
+    };
+  });
+}
+
+/** Mesa abierta de un mozo por número (404 si no la tiene abierta). */
+async function mesaDelMozo(mozoId, numero) {
+  const abierta = await mesasRepo.findAbiertaPorNumero(numero);
+  if (!abierta || abierta.mozo.id !== mozoId) throw notFound(`No tenés la mesa ${numero} abierta.`);
+  return abierta;
 }
 
 /** Pedido tomado por este mozo (el administrador puede ver los de cualquier mozo). */
@@ -318,24 +353,31 @@ export async function pedidoDelMozo(id, usuario, { withDetalles = true } = {}) {
 
 /**
  * Libera una mesa cuando los clientes ya pagaron y se fueron: lo que quedó sin marcar
- * (listo, en preparación, despachado por la caja...) pasa a "En Mesa" y la mesa desaparece.
+ * (listo, en preparación, despachado por la caja...) pasa a "En Mesa", la mesa se cierra
+ * y los celulares que la seguían pierden el acceso.
+ * @param {{aperturaId?: number, mozoId?: number, numero?: number}} opts
  */
-export async function liberarMesa({ mozoId, mesa }) {
-  const [abierta] = await listarMesas({ mozoId, mesa });
-  if (!abierta) throw notFound(`La mesa ${mesa} ya está libre.`);
-  if (abierta.pendiente > 0) {
-    throw conflict(`La mesa ${mesa} todavía debe ${abierta.pendiente.toFixed(2)}. Cobrala antes de liberarla.`, { pendiente: abierta.pendiente });
+export async function liberarMesa({ aperturaId, mozoId, numero }) {
+  const apertura = aperturaId ? await mesasRepo.findById(aperturaId) : await mesaDelMozo(mozoId, numero);
+  if (!apertura?.abierta) throw notFound('La mesa ya está libre.');
+  const [mesa] = await listarMesas({ aperturas: [apertura] });
+  if (mesa.pendiente > 0) {
+    throw conflict(`La mesa ${mesa.mesa} todavía debe ${mesa.pendiente.toFixed(2)}. Cobrala antes de liberarla.`, { pendiente: mesa.pendiente });
   }
-  const abiertos = abierta.pedidos.filter((p) => !ENTREGADOS.includes(p.estado));
+  const abiertos = mesa.pedidos.filter((p) => !ENTREGADOS.includes(p.estado));
   for (const p of abiertos) await cambiarEstado(p.id, 'En Mesa');
-  return { mesa, liberados: abiertos.length };
+  await mesasRepo.cerrar(apertura.id);
+  const aviso = { id: apertura.id, mesa: apertura.numero, mozo_id: apertura.mozo.id };
+  publish('mesa:liberada', { staff: aviso, mozo: aviso, mesa: { mesa_abierta_id: apertura.id } });
+  return { mesa: apertura.numero, liberados: abiertos.length };
 }
 
 /** Cobra de una vez todo lo pendiente de una mesa del mozo. */
-export async function cobrarMesa({ usuario, mesa, metodoPago }) {
-  const [abierta] = await listarMesas({ mozoId: usuario.id, mesa });
-  const pendientes = (abierta?.pedidos || []).filter((p) => p.pago?.estado !== 'Completado');
-  if (!pendientes.length) throw conflict(`La mesa ${mesa} no tiene nada pendiente de cobro.`);
+export async function cobrarMesa({ usuario, mesa: numero, metodoPago }) {
+  const apertura = await mesaDelMozo(usuario.id, numero);
+  const [mesa] = await listarMesas({ aperturas: [apertura] });
+  const pendientes = mesa.pedidos.filter((p) => p.pago?.estado !== 'Completado');
+  if (!pendientes.length) throw conflict(`La mesa ${numero} no tiene nada pendiente de cobro.`);
   for (const p of pendientes) await registrarCobro(p.id, metodoPago);
-  return { mesa, cobrados: pendientes.length, total: round2(pendientes.reduce((s, p) => s + p.total, 0)) };
+  return { mesa: numero, cobrados: pendientes.length, total: round2(pendientes.reduce((s, p) => s + p.total, 0)) };
 }
