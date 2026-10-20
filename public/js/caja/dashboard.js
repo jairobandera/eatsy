@@ -213,17 +213,18 @@ async function cargarMesas() {
     const mesas = await api.get('/caja/mesas');
     body.innerHTML = mesas.length
       ? html`<div class="table-responsive"><table class="table align-middle mb-0">
-          <thead><tr><th>Mesa</th><th>Mozo</th><th>Pedidos</th><th>Total</th><th>Falta cobrar</th><th class="text-end"></th></tr></thead>
+          <thead><tr><th>Mesa</th><th>Código</th><th>Mozo</th><th>Pedidos</th><th>Total</th><th>Falta cobrar</th><th class="text-end"></th></tr></thead>
           <tbody>${mesas.map(
             (m) => html`<tr>
               <td class="fw-semibold">Mesa ${m.mesa}</td>
+              <td class="fw-semibold font-monospace">${m.codigo}</td>
               <td>${m.mozo.nombre}</td>
-              <td class="small">${m.pedidos.map((p) => html`<div>${p.codigo} ${estadoBadge(p.estado)}</div>`)}</td>
+              <td class="small">${m.pedidos.length ? m.pedidos.map((p) => html`<div>${p.codigo} ${estadoBadge(p.estado)}</div>`) : html`<span class="text-muted">Sin pedidos</span>`}</td>
               <td>${money(m.total)}</td>
               <td>${m.pendiente > 0 ? html`<span class="text-danger fw-semibold">${money(m.pendiente)}</span>` : html`<span class="text-success"><i class="bi bi-check2-all"></i> Pago</span>`}</td>
               <td class="text-end">${m.pendiente > 0
                 ? html`<span class="small text-muted">Cobrar antes de liberar</span>`
-                : html`<button class="btn btn-sm btn-outline-secondary rounded-pill" data-liberar-mozo="${m.mozo.id}" data-liberar-mesa="${m.mesa}"><i class="bi bi-door-open me-1"></i>Liberar</button>`}</td>
+                : html`<button class="btn btn-sm btn-outline-secondary rounded-pill" data-liberar-id="${m.id}" data-liberar-mesa="${m.mesa}"><i class="bi bi-door-open me-1"></i>Liberar</button>`}</td>
             </tr>`,
           )}</tbody></table></div>`.toString()
       : '<div class="empty-state"><i class="bi bi-grid-3x3-gap"></i>No hay mesas abiertas.</div>';
@@ -248,7 +249,7 @@ modalMesasEl.addEventListener('click', async (e) => {
   });
   if (!ok) return;
   try {
-    await api.post('/caja/mesas/liberar', { mozo_id: Number(b.dataset.liberarMozo), mesa });
+    await api.post(`/caja/mesas/${Number(b.dataset.liberarId)}/liberar`, {});
     toast(`Mesa ${mesa} liberada`);
     cargarMesas();
     load();

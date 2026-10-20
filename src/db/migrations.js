@@ -3,6 +3,7 @@
  * aplican lo que falte. Así una base creada con una versión anterior se actualiza sola.
  */
 
+import crypto from 'node:crypto';
 import { categoriasSinCocina, preciosExtra } from './seed-data.js';
 
 async function columnExists(conn, table, column) {
@@ -76,4 +77,36 @@ export async function runMigrations(conn) {
     await conn.query('UPDATE categorias SET va_a_cocina = 0 WHERE nombre IN (?)', [categoriasSinCocina]);
   }
   await addColumn(conn, 'detalle_pedido', 'para_cocina', 'TINYINT(1) NOT NULL DEFAULT 1 AFTER subtotal');
+
+  // Mesas abiertas a mano (tabla mesas_abiertas, la crea schema.sql) y pedidos enlazados a la apertura.
+  if (await addColumn(conn, 'pedidos', 'mesa_abierta_id', 'INT UNSIGNED NULL AFTER mesa')) {
+    await conn.query(
+      'ALTER TABLE pedidos ADD CONSTRAINT fk_pedidos_mesa FOREIGN KEY (mesa_abierta_id) REFERENCES mesas_abiertas(id) ON DELETE SET NULL',
+    );
+    await abrirMesasExistentes(conn);
+  }
+}
+
+/**
+ * Una sola vez: las mesas que con la versión anterior figuraban abiertas (pedidos de mozo sin
+ * cancelar que no estén servidos y cobrados) pasan a ser aperturas, para que no desaparezcan.
+ */
+async function abrirMesasExistentes(conn) {
+  const [grupos] = await conn.query(
+    `SELECT p.usuario_id, p.mesa, MIN(p.created_at) AS desde
+       FROM pedidos p LEFT JOIN pagos pg ON pg.pedido_id = p.id
+      WHERE p.origen = 'Mozo' AND p.mesa IS NOT NULL AND p.estado <> 'Cancelado'
+        AND NOT (p.estado IN ('Entregado', 'En Mesa') AND pg.estado = 'Completado')
+        AND (p.created_at >= CURDATE() OR p.estado NOT IN ('Entregado', 'En Mesa'))
+      GROUP BY p.usuario_id, p.mesa`,
+  );
+  for (const g of grupos) {
+    const codigo = String(crypto.randomInt(0, 10000)).padStart(4, '0');
+    const [r] = await conn.query('INSERT INTO mesas_abiertas (mozo_id, numero, codigo, abierta_at) VALUES (?, ?, ?, ?)', [g.usuario_id, g.mesa, codigo, g.desde]);
+    await conn.query(
+      `UPDATE pedidos SET mesa_abierta_id = ? WHERE origen = 'Mozo' AND usuario_id = ? AND mesa = ? AND estado <> 'Cancelado' AND created_at >= ?`,
+      [r.insertId, g.usuario_id, g.mesa, g.desde],
+    );
+  }
+  if (grupos.length) console.log(`  · migración: ${grupos.length} mesa(s) abierta(s) pasadas a mesas_abiertas`);
 }

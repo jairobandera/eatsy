@@ -38,11 +38,21 @@
     <section id="vista-mesa" hidden>
       <form class="seg-card" id="form-mesa" novalidate autocomplete="off">
         <h2 class="h5 fw-bold mb-1">¿En qué mesa estás?</h2>
-        <p class="text-muted small mb-3">El número está en la mesa, junto a este código.</p>
-        <input class="form-control form-control-lg text-center fw-bold mesa-input mb-3" id="mesa" name="mesa" type="number"
-               inputmode="numeric" min="1" max="999" required placeholder="Ej. 5" enterkeyhint="go">
+        <p class="text-muted small mb-3">Pedile a tu mozo el <b>código de la mesa</b> (4 números).</p>
+        <div class="row g-2 mb-3">
+          <div class="col-5">
+            <label class="form-label fw-semibold small" for="mesa">Mesa</label>
+            <input class="form-control form-control-lg text-center fw-bold mesa-input" id="mesa" name="mesa" type="number"
+                   inputmode="numeric" min="1" max="999" required placeholder="5" enterkeyhint="next">
+          </div>
+          <div class="col-7">
+            <label class="form-label fw-semibold small" for="codigo">Código</label>
+            <input class="form-control form-control-lg text-center fw-bold mesa-input" id="codigo" name="codigo" type="text"
+                   inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="one-time-code" required placeholder="0000" enterkeyhint="go">
+          </div>
+        </div>
         <div class="alert alert-danger py-2 small d-none" id="mesa-error" role="alert"></div>
-        <button class="btn btn-brand btn-lg w-100 rounded-pill fw-semibold" type="submit"><i class="bi bi-arrow-right-circle me-1"></i>Continuar</button>
+        <button class="btn btn-brand btn-lg w-100 rounded-pill fw-semibold" type="submit" id="btn-entrar" data-loading-text="Entrando..."><i class="bi bi-arrow-right-circle me-1"></i>Entrar</button>
       </form>
     </section>
 

@@ -3,8 +3,7 @@ import { createApp } from './src/app.js';
 import config from './src/config/index.js';
 import { closeDatabase, initDatabase, sql } from './src/db/connection.js';
 import { seedInicial } from './src/db/seed.js';
-import { readSeguimiento, readSession } from './src/middlewares/auth.js';
-import { resolverMesa } from './src/services/mesas.service.js';
+import { readMesaAcceso, readSeguimiento, readSession } from './src/middlewares/auth.js';
 import { publicBaseUrl } from './src/utils/network.js';
 import { closeRealtime, initRealtime } from './src/websocket/realtime.js';
 
@@ -30,8 +29,8 @@ async function main() {
 
   // WebSocket nativo en el mismo puerto (ws://host:PORT/ws), autenticado con la cookie de sesión.
   // Los celulares de clientes se identifican con la cookie de seguimiento (solo ven su pedido)
-  // o, en una mesa, con el QR del mozo y el número de mesa (solo ven los pedidos de esa mesa).
-  initRealtime(server, { authenticate: readSession, seguimiento: readSeguimiento, resolverMesa });
+  // o, en una mesa, con la cookie que obtienen con el código de la mesa (solo ven los pedidos de esa mesa).
+  initRealtime(server, { authenticate: readSession, seguimiento: readSeguimiento, mesa: readMesaAcceso });
 
   server.listen(config.port, () => {
     // En la nube (PUBLIC_URL / RENDER_EXTERNAL_URL) mostramos la URL pública; en el local, localhost.

@@ -13,6 +13,7 @@ import {
   cobrarMesa,
   crearPedido,
   listarLlamados,
+  abrirMesa,
   liberarMesa,
   listarMesas,
   listarPedidosCaja,
@@ -168,6 +169,12 @@ export const mozoController = {
 
   get: async (req, res) => res.json(await pedidoDelMozo(parseId(req.params.id), req.user)),
 
+  /** Abre una mesa vacía (cuando se sienta un cliente): genera el código para su celular. */
+  abrirMesa: async (req, res) => {
+    const { mesa } = validate(req.body, { mesa: mesaSchema });
+    res.status(201).json(await abrirMesa({ mozo: req.user, numero: mesa }));
+  },
+
   /** El pedido del mozo va directo a la cocina (y aparece en la caja). */
   create: async (req, res) => {
     const data = validate(req.body, { mesa: mesaSchema, items: itemsSchema, codigo_cupon: cuponSchema });
@@ -210,16 +217,13 @@ export const mozoController = {
   },
 
   /** Los clientes pagaron y se fueron: la mesa queda libre. */
-  liberarMesa: async (req, res) => res.json(await liberarMesa({ mozoId: req.user.id, mesa: mesaParam(req) })),
+  liberarMesa: async (req, res) => res.json(await liberarMesa({ mozoId: req.user.id, numero: mesaParam(req) })),
 };
 
 /** La caja ve las mesas de todos los mozos y también puede liberarlas. */
 export const cajaMesasController = {
   list: async (_req, res) => res.json(await listarMesas()),
-  liberar: async (req, res) => {
-    const data = validate(req.body, { mozo_id: { type: 'integer', required: true, min: 1, label: 'mozo' }, mesa: mesaSchema });
-    res.json(await liberarMesa({ mozoId: data.mozo_id, mesa: data.mesa }));
-  },
+  liberar: async (req, res) => res.json(await liberarMesa({ aperturaId: parseId(req.params.id) })),
 };
 
 // ───────────── Pantalla pública de llamados ─────────────

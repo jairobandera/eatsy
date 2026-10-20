@@ -15,6 +15,21 @@ CREATE TABLE IF NOT EXISTS usuarios (
   UNIQUE KEY uq_usuarios_qr (qr_token)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Mesas abiertas por un mozo (aunque todavía no tengan pedidos). Cada apertura tiene un código
+-- de 4 dígitos que el mozo le da al cliente para seguir la mesa desde el celular; al liberarla
+-- (cerrada_at) el código y el acceso de esos celulares dejan de valer.
+CREATE TABLE IF NOT EXISTS mesas_abiertas (
+  id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  mozo_id     INT UNSIGNED      NOT NULL,
+  numero      SMALLINT UNSIGNED NOT NULL,
+  codigo      CHAR(4)           NOT NULL,
+  abierta_at  DATETIME          NOT NULL,
+  cerrada_at  DATETIME          NULL,
+  INDEX idx_mesas_numero (numero, cerrada_at),
+  INDEX idx_mesas_mozo (mozo_id, cerrada_at),
+  CONSTRAINT fk_mesas_mozo FOREIGN KEY (mozo_id) REFERENCES usuarios(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS clientes (
   id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   nombre      VARCHAR(50)  NOT NULL,
@@ -107,6 +122,7 @@ CREATE TABLE IF NOT EXISTS pedidos (
   descuento_cupon DECIMAL(10,2) NOT NULL DEFAULT 0,
   origen      ENUM('Caja', 'Kiosco', 'Mozo') NOT NULL,
   mesa        SMALLINT UNSIGNED NULL,           -- solo pedidos tomados por un mozo
+  mesa_abierta_id INT UNSIGNED  NULL,            -- apertura de la mesa (mesas_abiertas)
   total       DECIMAL(10,2) NOT NULL DEFAULT 0,
   metodo_pago ENUM('Efectivo', 'Tarjeta') NOT NULL,
   estado      ENUM('Cancelado', 'Recibido', 'En Preparacion', 'Listo', 'Entregado', 'En Mesa') NOT NULL,
@@ -119,7 +135,8 @@ CREATE TABLE IF NOT EXISTS pedidos (
   INDEX idx_pedidos_updated (updated_at),
   INDEX idx_pedidos_mesa (usuario_id, mesa),
   CONSTRAINT fk_pedidos_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id),
-  CONSTRAINT fk_pedidos_cliente FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE SET NULL
+  CONSTRAINT fk_pedidos_cliente FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE SET NULL,
+  CONSTRAINT fk_pedidos_mesa FOREIGN KEY (mesa_abierta_id) REFERENCES mesas_abiertas(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS detalle_pedido (

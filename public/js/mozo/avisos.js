@@ -51,6 +51,7 @@ export function iniciarAvisosMozo({ onCambio = () => {}, onLlamado = () => {}, e
   rt.on('pedido:creado', onCambio);
   rt.on('pedido:actualizado', onCambio);
   rt.on('pago:estado', onCambio);
+  rt.on('mesa:liberada', () => onCambio());
   rt.on('mozo:llamado', ({ mesa }) => {
     const llamados = leerLlamados();
     const yaLlamaba = llamados.has(mesa);

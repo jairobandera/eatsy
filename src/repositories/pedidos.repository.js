@@ -24,6 +24,7 @@ function toDto(r) {
     codigo: r.codigo,
     origen: r.origen,
     mesa: r.mesa ?? null,
+    mesa_abierta_id: r.mesa_abierta_id ?? null,
     estado: r.estado,
     metodo_pago: r.metodo_pago,
     total: round2(r.total),
@@ -155,33 +156,14 @@ export const pedidosRepo = {
     return { rows: withDetalles ? await attachDetalles(rows) : rows, total: Number(total) };
   },
 
-  /**
-   * Pedidos de mesas "abiertas" de un mozo (o de todos si mozoId es null): todo lo que no
-   * esté cancelado ni terminado y cobrado. Cuando una mesa queda servida y paga, desaparece.
-   * Lo servido de días anteriores (aunque haya quedado sin cobrar) no vuelve a aparecer.
-   * @param {{mozoId?: number|null, mesa?: number, cerrados: string[], hoy: string}} opts
-   */
-  async deMesasAbiertas({ mozoId = null, mesa, cerrados, hoy }) {
-    const where = [
-      `p.origen = 'Mozo'`,
-      `p.estado <> 'Cancelado'`,
-      `NOT (p.estado IN (?) AND pg.estado = 'Completado')`,
-      `(p.created_at >= ? OR p.estado NOT IN (?))`,
-    ];
-    const params = [cerrados, `${hoy} 00:00:00`, cerrados];
-    if (mozoId) {
-      where.push('p.usuario_id = ?');
-      params.push(mozoId);
-    }
-    if (mesa) {
-      where.push('p.mesa = ?');
-      params.push(mesa);
-    }
-    const rows = (await sql.all(`${BASE_SELECT} WHERE ${where.join(' AND ')} ORDER BY p.mesa, p.id`, params)).map(toDto);
+  /** Pedidos (sin cancelar) de las aperturas de mesa indicadas, con detalles. */
+  async deAperturas(ids) {
+    if (!ids.length) return [];
+    const rows = (await sql.all(`${BASE_SELECT} WHERE p.mesa_abierta_id IN (?) AND p.estado <> 'Cancelado' ORDER BY p.id`, [ids])).map(toDto);
     return attachDetalles(rows);
   },
 
-  async insert({ usuario_id, cliente_id, origen, mesa = null, metodo_pago, estado, codigo, total = 0, promocion_id = null, cupon_codigo = null, descuento_cupon = 0 }) {
+  async insert({ usuario_id, cliente_id, origen, mesa = null, mesa_abierta_id = null, metodo_pago, estado, codigo, total = 0, promocion_id = null, cupon_codigo = null, descuento_cupon = 0 }) {
     const ts = now();
     const r = await sql.run('INSERT INTO pedidos SET ?', [
       {
@@ -192,6 +174,7 @@ export const pedidosRepo = {
         descuento_cupon,
         origen,
         mesa,
+        mesa_abierta_id,
         total,
         metodo_pago,
         estado,

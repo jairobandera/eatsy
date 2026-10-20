@@ -33,7 +33,7 @@ router.use((_req, res, next) => {
 
 // ── Un celular que sigue su pedido solo puede usar la API de seguimiento (y la de mesas, si escanea un QR de mesa).
 router.use((req, _res, next) => {
-  if (!req.user && req.seguimientoId && !req.path.startsWith('/seguimiento') && !req.path.startsWith('/mesa/')) {
+  if (!req.user && req.seguimientoId && !req.path.startsWith('/seguimiento') && !req.path.startsWith('/mesa')) {
     return next(forbidden('Desde este dispositivo solo podés ver el estado de tu pedido.'));
   }
   next();
@@ -45,10 +45,12 @@ router.get('/seguimiento', seguimientoController.ver);
 router.delete('/seguimiento', seguimientoController.salir);
 router.get('/publico/seguimiento-qr', qrSeguimiento);
 
-// ── Celular del cliente en una mesa (QR del mozo): ver sus pedidos y llamar al mozo
+// ── Celular del cliente en una mesa (QR del mozo + código de la mesa): ver sus pedidos y llamar al mozo
+router.get('/mesa', mesaController.actual);
+router.delete('/mesa', mesaController.salir);
+router.post('/mesa/llamar', mesaController.llamar);
 router.get('/mesa/:token', mesaController.info);
-router.get('/mesa/:token/:mesa', mesaController.pedidos);
-router.post('/mesa/:token/:mesa/llamar', mesaController.llamar);
+router.post('/mesa/:token/ingresar', mesaController.ingresar);
 
 // ── Salud (lo usa Render/Docker para saber si la app y la base responden)
 router.get('/salud', async (_req, res) => {
@@ -91,7 +93,7 @@ caja.put('/pedidos/:id', cajaController.update);
 caja.patch('/pedidos/:id/estado', cajaController.estado);
 caja.patch('/pedidos/:id/pago', cajaController.pago);
 caja.get('/mesas', cajaMesasController.list);
-caja.post('/mesas/liberar', cajaMesasController.liberar);
+caja.post('/mesas/:id/liberar', cajaMesasController.liberar);
 caja.get('/clientes', clientesController.buscar);
 caja.get('/clientes/cedula/:cedula', clientesController.porCedula);
 caja.post('/clientes', clientesController.create);
@@ -110,6 +112,7 @@ router.use('/cocina', cocina);
 const mozo = Router();
 mozo.use(requireRole('Mozo'));
 mozo.get('/mesas', mozoController.mesas);
+mozo.post('/mesas', mozoController.abrirMesa);
 mozo.post('/mesas/:mesa/cobrar', mozoController.cobrarMesa);
 mozo.post('/mesas/:mesa/liberar', mozoController.liberarMesa);
 mozo.get('/pedidos/:id', mozoController.get);
