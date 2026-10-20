@@ -96,16 +96,19 @@ body.kiosco { background: #f6f3f1; user-select: none; -webkit-tap-highlight-colo
 .ing-k { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.55rem 0; border-bottom: 1px solid #f1f3f5; }
 .ing-k:last-child { border-bottom: 0; }
 .ing-k-name { font-weight: 500; }
-.ing-k.quitado .ing-k-name { color: #adb5bd; text-decoration: line-through; }
+.ing-k-sin { display: none; font-size: 0.78rem; font-weight: 600; color: #c92a2a; }
+.ing-k.quitado .nombre { color: #adb5bd; text-decoration: line-through; }
+.ing-k.quitado .ing-k-sin { display: block; }
 .ing-k.con-extra .ing-k-name { color: #087f5b; font-weight: 700; }
 .ing-k-actions { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
 
+/* Quitar / volver a agregar un ingrediente */
 .ing-quitar {
-  display: inline-flex; align-items: center; gap: 0.3rem; min-height: 44px; padding: 0 0.9rem; border-radius: 2rem;
-  border: 2px solid var(--brand); background: var(--brand-soft); color: var(--brand-dark); font-weight: 600;
+  display: inline-flex; align-items: center; gap: 0.35rem; min-height: 44px; padding: 0 0.9rem; border-radius: 2rem;
+  border: 2px solid #dee2e6; background: #fff; color: #495057; font-weight: 600;
 }
 .ing-quitar .off { display: none; }
-.ing-quitar[aria-pressed='true'] { border-color: #dee2e6; background: #f8f9fa; color: #dc3545; }
+.ing-quitar[aria-pressed='true'] { border-color: var(--brand); background: var(--brand-soft); color: var(--brand-dark); }
 .ing-quitar[aria-pressed='true'] .on { display: none; }
 .ing-quitar[aria-pressed='true'] .off { display: inline; }
 
