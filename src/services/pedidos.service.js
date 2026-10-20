@@ -276,8 +276,9 @@ export async function obtenerPedido(id) {
 /** Pedidos del día para la caja. vista: 'activos' (no entregados) | 'entregados' | 'todos' */
 export function listarPedidosCaja({ vista = 'activos', search, page, perPage }) {
   const opts = { fecha: today(), search, limit: perPage, offset: (page - 1) * perPage };
-  if (vista === 'activos') Object.assign(opts, { excluirEstados: CERRADOS });
-  if (vista === 'entregados') Object.assign(opts, { estados: ENTREGADOS, fechaCampo: 'updated_at' });
+  // Los pedidos de una mesa siguen en la caja (aunque ya estén en la mesa) hasta que se cobra y libera la mesa.
+  if (vista === 'activos') Object.assign(opts, { excluirEstados: CERRADOS, mesasAbiertas: 'incluir' });
+  if (vista === 'entregados') Object.assign(opts, { estados: ENTREGADOS, fechaCampo: 'updated_at', mesasAbiertas: 'excluir' });
   if (vista === 'cancelados') Object.assign(opts, { estados: ['Cancelado'] });
   return pedidosRepo.list(opts);
 }
@@ -372,12 +373,16 @@ export async function liberarMesa({ aperturaId, mozoId, numero }) {
   return { mesa: apertura.numero, liberados: abiertos.length };
 }
 
-/** Cobra de una vez todo lo pendiente de una mesa del mozo. */
-export async function cobrarMesa({ usuario, mesa: numero, metodoPago }) {
-  const apertura = await mesaDelMozo(usuario.id, numero);
+/**
+ * Cobra de una vez todo lo pendiente de una mesa: la del mozo (por número) o cualquiera desde la caja (por id).
+ * @param {{aperturaId?: number, usuario?: object, mesa?: number, metodoPago: string}} opts
+ */
+export async function cobrarMesa({ aperturaId, usuario, mesa: numero, metodoPago }) {
+  const apertura = aperturaId ? await mesasRepo.findById(aperturaId) : await mesaDelMozo(usuario.id, numero);
+  if (!apertura?.abierta) throw notFound('La mesa ya está libre.');
   const [mesa] = await listarMesas({ aperturas: [apertura] });
   const pendientes = mesa.pedidos.filter((p) => p.pago?.estado !== 'Completado');
-  if (!pendientes.length) throw conflict(`La mesa ${numero} no tiene nada pendiente de cobro.`);
+  if (!pendientes.length) throw conflict(`La mesa ${apertura.numero} no tiene nada pendiente de cobro.`);
   for (const p of pendientes) await registrarCobro(p.id, metodoPago);
-  return { mesa: numero, cobrados: pendientes.length, total: round2(pendientes.reduce((s, p) => s + p.total, 0)) };
+  return { mesa: apertura.numero, cobrados: pendientes.length, total: round2(pendientes.reduce((s, p) => s + p.total, 0)) };
 }

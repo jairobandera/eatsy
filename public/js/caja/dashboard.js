@@ -4,7 +4,19 @@ import { mountLayout } from '../core/layout.js';
 import { createRealtime } from '../core/realtime.js';
 import { play } from '../core/sound.js';
 import { ESTADO_LABEL, confirmDialog, debounce, escapeHtml, estadoBadge, formatTime, html, money, renderPagination, showError, toast } from '../core/ui.js';
-import { CERRADOS, cambiarEstado, cambiarPago, clienteNombre, estadoEntrega, estadosPara, origenBadge, pagoSelect, verDetalle } from './shared.js';
+import {
+  CERRADOS,
+  cambiarEstado,
+  cambiarPago,
+  clienteNombre,
+  cobrarPedido,
+  estadoEntrega,
+  estadosPara,
+  origenBadge,
+  pagoSelect,
+  pedirMetodoPago,
+  verDetalle,
+} from './shared.js';
 
 await mountLayout('caja', { realtime: true, sound: true });
 const app = document.getElementById('app');
@@ -90,6 +102,7 @@ const rowHtml = (p) =>
     <td style="min-width:130px">${pagoSelect(p)}</td>
     <td class="text-end text-nowrap">
       <button class="btn btn-sm btn-outline-primary rounded-pill" data-ver="${p.id}" title="Ver detalle"><i class="bi bi-eye"></i></button>
+      ${p.origen === 'Mozo' && p.estado !== 'Cancelado' && p.pago?.estado !== 'Completado' ? html`<button class="btn btn-sm btn-outline-success rounded-pill" data-cobrar="${p.id}" title="Cobrar (efectivo o tarjeta)"><i class="bi bi-cash-coin"></i><span class="d-none d-xl-inline ms-1">Cobrar</span></button>` : ''}
       ${accionesEstado(p)}
     </td>
   </tr>`.toString();
@@ -127,7 +140,8 @@ async function cargarContadores() {
 /** Actualiza (o quita) una fila con los datos nuevos de un pedido. */
 function upsert(p) {
   const tr = tbody.querySelector(`tr[data-id="${p.id}"]`);
-  const pertenece = state.vista === 'activos' ? !CERRADOS.includes(p.estado) : p.estado === 'Cancelado';
+  // Los pedidos de una mesa siguen en "En curso" hasta que se cobra y libera la mesa.
+  const pertenece = state.vista === 'activos' ? !CERRADOS.includes(p.estado) || p.mesa_abierta : p.estado === 'Cancelado';
   if (tr && !pertenece) tr.remove();
   else if (tr) {
     tr.outerHTML = rowHtml(p);
@@ -144,7 +158,13 @@ tbody.addEventListener('click', async (e) => {
   const entregar = e.target.closest('[data-entregar]');
   const listo = e.target.closest('[data-listo]');
   const estado = e.target.closest('[data-estado]');
+  const cobrar = e.target.closest('[data-cobrar]');
   if (ver) return verDetalle(Number(ver.dataset.ver), upsert);
+  if (cobrar) {
+    const cobrado = await cobrarPedido(state.pedidos.get(Number(cobrar.dataset.cobrar)));
+    if (cobrado) upsert(cobrado);
+    return;
+  }
 
   let pedido;
   let nuevo;
@@ -223,7 +243,7 @@ async function cargarMesas() {
               <td>${money(m.total)}</td>
               <td>${m.pendiente > 0 ? html`<span class="text-danger fw-semibold">${money(m.pendiente)}</span>` : html`<span class="text-success"><i class="bi bi-check2-all"></i> Pago</span>`}</td>
               <td class="text-end">${m.pendiente > 0
-                ? html`<span class="small text-muted">Cobrar antes de liberar</span>`
+                ? html`<button class="btn btn-sm btn-success rounded-pill" data-cobrar-mesa-id="${m.id}" data-cobrar-mesa="${m.mesa}" data-total="${m.pendiente}"><i class="bi bi-cash-stack me-1"></i>Cobrar</button>`
                 : html`<button class="btn btn-sm btn-outline-secondary rounded-pill" data-liberar-id="${m.id}" data-liberar-mesa="${m.mesa}"><i class="bi bi-door-open me-1"></i>Liberar</button>`}</td>
             </tr>`,
           )}</tbody></table></div>`.toString()
@@ -239,6 +259,20 @@ app.querySelector('#btn-mesas').addEventListener('click', async () => {
 });
 
 modalMesasEl.addEventListener('click', async (e) => {
+  const c = e.target.closest('[data-cobrar-mesa-id]');
+  if (c) {
+    const metodo = await pedirMetodoPago(`¿Cómo pagó la mesa ${c.dataset.cobrarMesa}?`, Number(c.dataset.total));
+    if (!metodo) return;
+    try {
+      const r = await api.post(`/caja/mesas/${Number(c.dataset.cobrarMesaId)}/cobrar`, { metodo_pago: metodo });
+      toast(`Mesa ${r.mesa} cobrada: ${money(r.total)} (${metodo.toLowerCase()})`);
+      cargarMesas();
+      load();
+    } catch (err) {
+      showError(err, 'No se pudo cobrar la mesa');
+    }
+    return;
+  }
   const b = e.target.closest('[data-liberar-mesa]');
   if (!b) return;
   const mesa = Number(b.dataset.liberarMesa);
@@ -280,6 +314,11 @@ rt.on('pedido:estado', (p) => {
 });
 rt.on('pedido:actualizado', upsert);
 rt.on('pago:estado', upsert);
+// Al liberarse una mesa (desde el mozo o la caja) sus pedidos salen de "En curso".
+rt.on('mesa:liberada', () => {
+  load();
+  if (modalMesasEl.classList.contains('show')) cargarMesas();
+});
 rt.onReconnect(() => load());
 
 load();

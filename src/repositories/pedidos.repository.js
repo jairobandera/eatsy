@@ -11,7 +11,8 @@ const BASE_SELECT = `
          c.nombre AS c_nombre, c.apellido AS c_apellido, c.cedula AS c_cedula, c.telefono AS c_telefono, c.puntos AS c_puntos,
          pg.id AS pg_id, pg.tipo AS pg_tipo, pg.monto AS pg_monto, pg.estado AS pg_estado, pg.fecha AS pg_fecha,
          pp.cantidad AS puntos_generados,
-         (SELECT COUNT(*) FROM detalle_pedido dc WHERE dc.pedido_id = p.id AND dc.para_cocina = 1) AS items_cocina
+         (SELECT COUNT(*) FROM detalle_pedido dc WHERE dc.pedido_id = p.id AND dc.para_cocina = 1) AS items_cocina,
+         (SELECT ma.cerrada_at IS NULL FROM mesas_abiertas ma WHERE ma.id = p.mesa_abierta_id) AS mesa_sigue_abierta
     FROM pedidos p
     JOIN usuarios u ON u.id = p.usuario_id
     LEFT JOIN clientes c ON c.id = p.cliente_id
@@ -25,6 +26,7 @@ function toDto(r) {
     origen: r.origen,
     mesa: r.mesa ?? null,
     mesa_abierta_id: r.mesa_abierta_id ?? null,
+    mesa_abierta: Boolean(r.mesa_sigue_abierta), // su mesa todavía no se liberó
     estado: r.estado,
     metodo_pago: r.metodo_pago,
     total: round2(r.total),
@@ -120,29 +122,38 @@ export const pedidosRepo = {
    * Listado flexible de pedidos.
    * @param {{estados?: string[], excluirEstados?: string[], fechaCampo?: 'created_at'|'updated_at', fecha?: string,
    *          search?: string, order?: 'asc'|'desc', limit?: number, offset?: number, withDetalles?: boolean,
-   *          excluirOrigen?: string}} opts
+   *          excluirOrigen?: string, mesasAbiertas?: 'incluir'|'excluir'}} opts
+   *        mesasAbiertas: 'incluir' suma (aunque estén servidos o sean de otro día) los pedidos de mesas
+   *        todavía sin liberar; 'excluir' los saca.
    */
-  async list({ estados, excluirEstados, fechaCampo = 'created_at', fecha, search, order = 'desc', limit, offset = 0, withDetalles = false, excluirOrigen } = {}) {
+  async list({ estados, excluirEstados, fechaCampo = 'created_at', fecha, search, order = 'desc', limit, offset = 0, withDetalles = false, excluirOrigen, mesasAbiertas } = {}) {
     const where = [];
     const params = [];
     if (excluirOrigen) {
       where.push('p.origen <> ?');
       params.push(excluirOrigen);
     }
+    const filtro = [];
+    const filtroParams = [];
     if (estados?.length) {
-      where.push('p.estado IN (?)');
-      params.push(estados);
+      filtro.push('p.estado IN (?)');
+      filtroParams.push(estados);
     }
     if (excluirEstados?.length) {
-      where.push('p.estado NOT IN (?)');
-      params.push(excluirEstados);
+      filtro.push('p.estado NOT IN (?)');
+      filtroParams.push(excluirEstados);
     }
     if (fecha) {
       const col = fechaCampo === 'updated_at' ? 'p.updated_at' : 'p.created_at';
       // Rango en vez de DATE(col) para poder usar el índice.
-      where.push(`${col} BETWEEN ? AND ?`);
-      params.push(`${fecha} 00:00:00`, `${fecha} 23:59:59`);
+      filtro.push(`${col} BETWEEN ? AND ?`);
+      filtroParams.push(`${fecha} 00:00:00`, `${fecha} 23:59:59`);
     }
+    const enMesaAbierta = 'EXISTS (SELECT 1 FROM mesas_abiertas ma WHERE ma.id = p.mesa_abierta_id AND ma.cerrada_at IS NULL)';
+    if (mesasAbiertas === 'incluir' && filtro.length) where.push(`((${filtro.join(' AND ')}) OR ${enMesaAbierta})`);
+    else where.push(...filtro);
+    params.push(...filtroParams);
+    if (mesasAbiertas === 'excluir') where.push(`NOT ${enMesaAbierta}`);
     if (search) {
       const pattern = likePattern(search);
       where.push(`(p.codigo LIKE ? OR c.cedula LIKE ? OR CONCAT(c.nombre, ' ', c.apellido) LIKE ?)`);
