@@ -86,6 +86,7 @@ CREATE TABLE IF NOT EXISTS ingrediente_producto (
   producto_id    INT UNSIGNED NOT NULL,
   ingrediente_id INT UNSIGNED NOT NULL,
   es_obligatorio TINYINT(1)   NOT NULL DEFAULT 0,
+  permite_extra  TINYINT(1)   NOT NULL DEFAULT 1,   -- en este producto se puede pedir como extra
   PRIMARY KEY (producto_id, ingrediente_id),
   CONSTRAINT fk_ip_producto    FOREIGN KEY (producto_id)    REFERENCES productos(id)    ON DELETE CASCADE,
   CONSTRAINT fk_ip_ingrediente FOREIGN KEY (ingrediente_id) REFERENCES ingredientes(id) ON DELETE CASCADE

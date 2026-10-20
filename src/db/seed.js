@@ -33,7 +33,8 @@ export async function seedBase() {
       const id = await productosRepo.insert({ nombre, descripcion, precio, imagen, activo: 1 });
       prodIds.set(nombre, id);
       await productosRepo.syncCategorias(id, cats.map((c) => catIds.get(c)));
-      await productosRepo.syncIngredientes(id, ings.map(([n, obl]) => ({ id: ingIds.get(n), es_obligatorio: Boolean(obl) })));
+      const permiteExtra = !cats.some((c) => data.categoriasSinExtras.includes(c));
+      await productosRepo.syncIngredientes(id, ings.map(([n, obl]) => ({ id: ingIds.get(n), es_obligatorio: Boolean(obl), permite_extra: permiteExtra })));
     }
 
     const hoy = today();

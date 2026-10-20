@@ -19,7 +19,9 @@ const chips = (list, cls) =>
 
 function form(p) {
   const catSel = new Set((p?.categorias || []).map((c) => c.id));
-  const ingSel = new Map((p?.ingredientes || []).map((i) => [i.id, i.es_obligatorio]));
+  const ingSel = new Map((p?.ingredientes || []).map((i) => [i.id, i]));
+  // El ingrediente solo se puede ofrecer como extra si tiene precio de extra (Admin → Ingredientes).
+  const tienePrecioExtra = (i) => (i.precio_extra_ingrediente ?? i.precio_extra) != null;
   // Si el producto tiene relaciones deshabilitadas, también las mostramos para no perderlas.
   const cats = [...categorias, ...(p?.categorias || []).filter((c) => !categorias.some((x) => x.id === c.id))];
   const ings = [...ingredientes, ...(p?.ingredientes || []).filter((i) => !ingredientes.some((x) => x.id === i.id))];
@@ -73,20 +75,30 @@ function form(p) {
           <label class="form-label fw-medium mb-0">Ingredientes</label>
           <input type="search" class="form-control form-control-sm w-auto" placeholder="Filtrar..." data-filter="ings">
         </div>
-        <div class="form-text mt-0 mb-2">Marcá los que lleva el producto. Los <b>obligatorios</b> no se pueden quitar al pedir.</div>
+        <div class="form-text mt-0 mb-2">
+          Marcá los que lleva el producto. Los <b>obligatorios</b> no se pueden quitar al pedir.
+          Con <b>Extra</b> el cliente puede pedir más cantidad de ese ingrediente (ej. carne extra en la hamburguesa, pero no en la empanada).
+        </div>
         <div class="ing-list" id="ings">
-          ${ings.map(
-            (i) => html`<div class="ing-row" data-name="${i.nombre.toLowerCase()}">
+          ${ings.map((i) => {
+            const sel = ingSel.get(i.id);
+            const conPrecio = tienePrecioExtra(i);
+            const extra = conPrecio && (sel ? sel.permite_extra !== false : true);
+            return html`<div class="ing-row" data-name="${i.nombre.toLowerCase()}">
               <label class="d-flex align-items-center gap-2 flex-grow-1 mb-0 cursor-pointer">
-                <input class="form-check-input mt-0" type="checkbox" name="ingrediente_ids" value="${i.id}" ${ingSel.has(i.id) ? 'checked' : ''}>
+                <input class="form-check-input mt-0" type="checkbox" name="ingrediente_ids" value="${i.id}" ${sel ? 'checked' : ''}>
                 <span>${i.nombre}${i.activo === false ? ' (deshabilitado)' : ''}</span>
               </label>
               <div class="form-check form-switch mb-0">
-                <input class="form-check-input" type="checkbox" role="switch" name="obligatorio_${i.id}" id="obl-${i.id}" ${ingSel.get(i.id) ? 'checked' : ''} ${ingSel.has(i.id) ? '' : 'disabled'}>
+                <input class="form-check-input" type="checkbox" role="switch" name="obligatorio_${i.id}" id="obl-${i.id}" ${sel?.es_obligatorio ? 'checked' : ''} ${sel ? '' : 'disabled'}>
                 <label class="form-check-label small" for="obl-${i.id}">Obligatorio</label>
               </div>
-            </div>`,
-          )}
+              <div class="form-check form-switch mb-0 ms-2" title="${conPrecio ? 'El cliente puede pedir más cantidad de este ingrediente' : 'Este ingrediente no tiene precio de extra (se configura en Ingredientes)'}">
+                <input class="form-check-input" type="checkbox" role="switch" id="ext-${i.id}" data-con-precio="${conPrecio ? '1' : ''}" ${extra && sel ? 'checked' : ''} ${sel && conPrecio ? '' : 'disabled'}>
+                <label class="form-check-label small ${conPrecio ? '' : 'text-muted'}" for="ext-${i.id}">Extra</label>
+              </div>
+            </div>`;
+          })}
         </div>
       </div>
     </div>`.toString();
@@ -119,6 +131,11 @@ function onOpen(f) {
       const sw = f.querySelector(`#obl-${chk.value}`);
       sw.disabled = !chk.checked;
       if (!chk.checked) sw.checked = false;
+      // Extra: solo si el ingrediente tiene precio de extra; al marcarlo queda permitido por defecto.
+      const ext = f.querySelector(`#ext-${chk.value}`);
+      const conPrecio = Boolean(ext.dataset.conPrecio);
+      ext.disabled = !chk.checked || !conPrecio;
+      ext.checked = chk.checked && conPrecio;
     }),
   );
 
@@ -138,6 +155,7 @@ function read(f) {
   const ingredientesSel = [...f.querySelectorAll('[name=ingrediente_ids]:checked')].map((c) => ({
     id: Number(c.value),
     es_obligatorio: f.querySelector(`#obl-${c.value}`).checked,
+    permite_extra: f.querySelector(`#ext-${c.value}`).checked,
   }));
 
   const fd = new FormData();
@@ -171,7 +189,10 @@ createCrudPage({
       class: 'd-none d-xl-table-cell',
       render: (p) =>
         p.ingredientes.length
-          ? p.ingredientes.map((i) => html`<span class="badge rounded-pill ${i.es_obligatorio ? 'bg-brand' : 'text-bg-light border'} me-1 mb-1" title="${i.es_obligatorio ? 'Obligatorio' : 'Opcional'}">${i.nombre}</span>`)
+          ? p.ingredientes.map(
+              (i) =>
+                html`<span class="badge rounded-pill ${i.es_obligatorio ? 'bg-brand' : 'text-bg-light border'} me-1 mb-1" title="${i.es_obligatorio ? 'Obligatorio' : 'Opcional'}${i.precio_extra != null ? ' · se puede pedir extra' : ''}">${i.nombre}${i.precio_extra != null ? html` <i class="bi bi-plus-circle-fill"></i>` : ''}</span>`,
+            )
           : html`<span class="text-muted small">—</span>`,
     },
   ],

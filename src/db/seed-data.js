@@ -20,6 +20,9 @@ export const categorias = [
 /** Categorías que no pasan por la cocina: las prepara y entrega la caja. */
 export const categoriasSinCocina = ['Bebidas', 'Bebidas Alcohólicas', 'Postres', 'Cafetería'];
 
+/** Productos de estas categorías no ofrecen ingredientes extra (sugerencia inicial, editable por producto). */
+export const categoriasSinExtras = ['Empanadas'];
+
 export const ingredientes = [
   ['Carne de Res', 'Carne de res de alta calidad, jugosa y bien sazonada.'],
   ['Pechuga de Pollo', 'Pechuga de pollo tierna, grillada o empanizada.'],

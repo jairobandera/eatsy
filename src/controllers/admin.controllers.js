@@ -67,7 +67,14 @@ const productoSchema = {
   ingredientes: {
     type: 'array',
     default: [],
-    items: { type: 'object', schema: { id: { type: 'integer', required: true, min: 1 }, es_obligatorio: { type: 'boolean', default: false } } },
+    items: {
+      type: 'object',
+      schema: {
+        id: { type: 'integer', required: true, min: 1 },
+        es_obligatorio: { type: 'boolean', default: false },
+        permite_extra: { type: 'boolean', default: true, label: 'permite extra' },
+      },
+    },
   },
 };
 
