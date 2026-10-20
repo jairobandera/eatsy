@@ -1,15 +1,15 @@
-import path from 'node:path';
 import { Router } from 'express';
-import config from '../config/index.js';
 import { pageGuard, seguimientoLock } from '../middlewares/auth.js';
 import { HOME_BY_ROLE } from '../services/auth.service.js';
+import { paginaVersionada } from '../utils/assets.js';
 
 /**
  * Páginas HTML con URLs limpias. Cada sección valida el rol en el servidor
  * (además de la validación de cada endpoint de la API).
  */
 const router = Router();
-const page = (file) => (_req, res) => res.sendFile(path.join(config.paths.public, file));
+// El HTML siempre se revalida; sus JS/CSS van con ?v=<hash> (ver utils/assets.js).
+const page = (file) => (_req, res) => res.set('Cache-Control', 'no-cache').type('html').send(paginaVersionada(file));
 
 // Celulares de clientes: solo pueden ver su pedido.
 router.use(seguimientoLock);
