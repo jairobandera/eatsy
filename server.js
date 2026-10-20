@@ -32,9 +32,11 @@ async function main() {
   initRealtime(server, { authenticate: readSession, seguimiento: readSeguimiento });
 
   server.listen(config.port, () => {
-    console.log(`\n🍔 AutoPedido 2.0 listo en http://localhost:${config.port}  [modo ${config.appMode}]`);
-    console.log(`   WebSocket: ws://localhost:${config.port}/ws`);
-    console.log(`   Pantalla de llamados (pública): http://localhost:${config.port}/llamados`);
+    // En la nube (PUBLIC_URL / RENDER_EXTERNAL_URL) mostramos la URL pública; en el local, localhost.
+    const base = config.publicUrl ? publicBaseUrl(config) : `http://localhost:${config.port}`;
+    console.log(`\n🍔 AutoPedido 2.0 listo en ${base}  [modo ${config.appMode}]`);
+    console.log(`   WebSocket: ${base.replace(/^http/, 'ws')}/ws`);
+    console.log(`   Pantalla de llamados (pública): ${base}/llamados`);
     console.log(`   Seguimiento desde celulares (QR): ${publicBaseUrl(config)}/seguimiento\n`);
   });
 
