@@ -4,7 +4,7 @@
  */
 
 import crypto from 'node:crypto';
-import { categoriasSinCocina, preciosExtra } from './seed-data.js';
+import { categoriasSinCocina, categoriasSinExtras, preciosExtra } from './seed-data.js';
 
 async function columnExists(conn, table, column) {
   const [rows] = await conn.query(
@@ -77,6 +77,19 @@ export async function runMigrations(conn) {
     await conn.query('UPDATE categorias SET va_a_cocina = 0 WHERE nombre IN (?)', [categoriasSinCocina]);
   }
   await addColumn(conn, 'detalle_pedido', 'para_cocina', 'TINYINT(1) NOT NULL DEFAULT 1 AFTER subtotal');
+
+  // Extras por producto: el mismo ingrediente puede ofrecerse como extra en un producto y en otro no.
+  if (await addColumn(conn, 'ingrediente_producto', 'permite_extra', 'TINYINT(1) NOT NULL DEFAULT 1 AFTER es_obligatorio')) {
+    // Base existente: las empanadas no llevan extras (se puede cambiar en Admin → Productos).
+    await conn.query(
+      `UPDATE ingrediente_producto ip
+          JOIN categoria_producto cp ON cp.producto_id = ip.producto_id
+          JOIN categorias c ON c.id = cp.categoria_id
+          SET ip.permite_extra = 0
+        WHERE c.nombre IN (?)`,
+      [categoriasSinExtras],
+    );
+  }
 
   // Mesas abiertas a mano (tabla mesas_abiertas, la crea schema.sql) y pedidos enlazados a la apertura.
   if (await addColumn(conn, 'pedidos', 'mesa_abierta_id', 'INT UNSIGNED NULL AFTER mesa')) {

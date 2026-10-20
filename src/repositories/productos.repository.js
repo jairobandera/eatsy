@@ -27,7 +27,7 @@ async function withRelations(rows, { soloActivos = false } = {}) {
       [ids],
     ),
     sql.all(
-      `SELECT ip.producto_id, x.id, x.nombre, x.activo, x.precio_extra, ip.es_obligatorio
+      `SELECT ip.producto_id, x.id, x.nombre, x.activo, x.precio_extra, ip.es_obligatorio, ip.permite_extra
          FROM ingrediente_producto ip JOIN ingredientes x ON x.id = ip.ingrediente_id
         WHERE ip.producto_id IN (?) ${activos}
         ORDER BY ip.es_obligatorio DESC, x.nombre`,
@@ -45,7 +45,12 @@ async function withRelations(rows, { soloActivos = false } = {}) {
       nombre: i.nombre,
       activo: Boolean(i.activo),
       es_obligatorio: Boolean(i.es_obligatorio),
-      precio_extra: i.precio_extra, // null = no se ofrece como extra
+      // Este producto permite pedirlo como extra (ej. carne extra en la hamburguesa sí, en la empanada no).
+      permite_extra: Boolean(i.permite_extra),
+      // Precio del extra en ESTE producto: null = no se ofrece (el ingrediente no tiene precio de extra
+      // o el producto no lo permite). Kiosco, caja y validación del pedido usan este valor.
+      precio_extra: i.permite_extra ? i.precio_extra : null,
+      precio_extra_ingrediente: i.precio_extra,
     });
   }
   return [...byProduct.values()];
@@ -108,12 +113,12 @@ export const productosRepo = {
     }
   },
 
-  /** @param {{id:number, es_obligatorio:boolean}[]} ingredientes */
+  /** @param {{id:number, es_obligatorio:boolean, permite_extra?:boolean}[]} ingredientes */
   async syncIngredientes(productoId, ingredientes) {
     await sql.run('DELETE FROM ingrediente_producto WHERE producto_id = ?', [productoId]);
     if (ingredientes.length) {
-      await sql.run('INSERT INTO ingrediente_producto (producto_id, ingrediente_id, es_obligatorio) VALUES ?', [
-        ingredientes.map((i) => [productoId, i.id, i.es_obligatorio ? 1 : 0]),
+      await sql.run('INSERT INTO ingrediente_producto (producto_id, ingrediente_id, es_obligatorio, permite_extra) VALUES ?', [
+        ingredientes.map((i) => [productoId, i.id, i.es_obligatorio ? 1 : 0, i.permite_extra === false ? 0 : 1]),
       ]);
     }
   },
