@@ -42,7 +42,7 @@ const cardHtml = (p) => {
   return html`<div class="col-sm-6 col-lg-4 col-xxl-3" data-id="${p.id}">
     <article class="kitchen-card card-app h-100 d-flex flex-column" data-urgencia="${urgencia(min)}">
       <header class="kitchen-head">
-        <div><div class="kitchen-code">${p.codigo}</div><small>${p.origen} · ${formatTime(p.created_at)}</small></div>
+        <div><div class="kitchen-code">${p.codigo}</div><small>${p.origen === 'Mozo' ? html`<b>Mesa ${p.mesa}</b> · ${p.usuario.nombre}` : p.origen} · ${formatTime(p.created_at)}</small></div>
         <div class="text-end"><div class="kitchen-timer" data-timer><i class="bi bi-stopwatch me-1"></i>${min} min</div></div>
       </header>
       <ul class="kitchen-items list-unstyled mb-0 flex-grow-1">
@@ -103,7 +103,8 @@ grid.addEventListener('click', async (e) => {
   const b = e.target.closest('[data-listo]');
   if (!b) return;
   const p = pedidos.get(Number(b.dataset.listo));
-  if (!(await confirmDialog({ title: `¿${p.codigo} está listo?`, text: 'Se avisará a la caja y aparecerá en la pantalla de llamados.', confirmText: 'Sí, listo' }))) return;
+  const text = p.origen === 'Mozo' ? `Se avisará a ${p.usuario.nombre} para que lo lleve a la mesa ${p.mesa}.` : 'Se avisará a la caja y aparecerá en la pantalla de llamados.';
+  if (!(await confirmDialog({ title: `¿${p.codigo} está listo?`, text, confirmText: 'Sí, listo' }))) return;
   b.disabled = true;
   try {
     await api.patch(`/cocina/pedidos/${p.id}/listo`);

@@ -45,6 +45,7 @@ export async function obtenerEstadisticas(start, end) {
       pedidos_cancelados: Number(resumen.pedidos.cancelados),
       pedidos_kiosco: Number(resumen.pedidos.kiosco),
       pedidos_caja: Number(resumen.pedidos.caja),
+      pedidos_mozo: Number(resumen.pedidos.mozo),
       por_metodo: resumen.porMetodo.map((m) => ({ tipo: m.tipo, total: Number(m.total), cantidad: Number(m.cantidad) })),
     },
     ventasDiarias: dias.map((fecha) => ({ fecha, total: ventasMap.get(fecha) || 0 })),

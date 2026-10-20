@@ -7,6 +7,8 @@ export const usuarios = [
   { nombre: 'Cocina1', contrasena: '123456789', rol: 'Cocina' },
   { nombre: 'Cocina2', contrasena: '123456789', rol: 'Cocina' },
   { nombre: 'Kiosco1', contrasena: '123456789', rol: 'Cliente' },
+  { nombre: 'Mozo1', contrasena: '123456789', rol: 'Mozo' },
+  { nombre: 'Mozo2', contrasena: '123456789', rol: 'Mozo' },
 ];
 
 export const categorias = [

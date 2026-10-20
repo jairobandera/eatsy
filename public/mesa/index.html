@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#ff5722">
+  <meta name="robots" content="noindex">
+  <title>Mi mesa · Eatsy</title>
+  <link rel="icon" href="/img/icono.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/vendor/bootstrap/css/bootstrap.min.css">
+  <link rel="stylesheet" href="/vendor/bootstrap-icons/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/seguimiento.css">
+  <link rel="stylesheet" href="/css/mesa.css">
+</head>
+<body class="seguimiento">
+  <header class="seg-header">
+    <span class="seg-logo"><img src="/img/logo.png" alt="Eatsy"></span>
+    <div>
+      <h1 id="titulo">Mi mesa</h1>
+      <p id="subtitulo">Seguí tu pedido y llamá al mozo</p>
+    </div>
+  </header>
+
+  <main class="seg-main">
+    <div class="seg-card text-center py-5" id="cargando"><div class="spinner-border text-secondary" role="status"><span class="visually-hidden">Cargando...</span></div></div>
+
+    <!-- QR inválido o mozo deshabilitado -->
+    <section class="seg-card text-center" id="vista-error" hidden>
+      <i class="bi bi-qr-code-scan display-4 text-muted"></i>
+      <h2 class="h5 fw-bold mt-2">Código no disponible</h2>
+      <p class="text-muted mb-0" id="error-texto"></p>
+    </section>
+
+    <!-- Paso 1: número de mesa -->
+    <section id="vista-mesa" hidden>
+      <form class="seg-card" id="form-mesa" novalidate autocomplete="off">
+        <h2 class="h5 fw-bold mb-1">¿En qué mesa estás?</h2>
+        <p class="text-muted small mb-3">El número está en la mesa, junto a este código.</p>
+        <input class="form-control form-control-lg text-center fw-bold mesa-input mb-3" id="mesa" name="mesa" type="number"
+               inputmode="numeric" min="1" max="999" required placeholder="Ej. 5" enterkeyhint="go">
+        <div class="alert alert-danger py-2 small d-none" id="mesa-error" role="alert"></div>
+        <button class="btn btn-brand btn-lg w-100 rounded-pill fw-semibold" type="submit"><i class="bi bi-arrow-right-circle me-1"></i>Continuar</button>
+      </form>
+    </section>
+
+    <!-- Paso 2: pedidos de la mesa -->
+    <section id="vista-pedidos" hidden>
+      <div class="seg-card text-center">
+        <div class="small text-muted">Te atiende</div>
+        <div class="fw-bold fs-5" id="mozo-nombre"></div>
+        <button class="btn btn-brand btn-lg w-100 rounded-pill fw-semibold mt-3 btn-llamar" id="btn-llamar">
+          <i class="bi bi-bell me-1"></i> Llamar al mozo
+        </button>
+        <div class="small mt-2 min-h" id="llamar-estado" aria-live="polite"></div>
+      </div>
+
+      <div id="pedidos"></div>
+
+      <div class="seg-card d-flex justify-content-between align-items-center" id="totales" hidden>
+        <div>
+          <div class="small text-muted">Total de la mesa</div>
+          <div class="fs-4 fw-bold" id="total"></div>
+        </div>
+        <div class="text-end small" id="pendiente"></div>
+      </div>
+
+      <button class="btn btn-link text-muted w-100" id="btn-cambiar"><i class="bi bi-arrow-repeat me-1"></i>No es mi mesa</button>
+      <div class="text-center small text-muted conexion" id="conexion"></div>
+    </section>
+  </main>
+
+  <script type="module" src="/js/mesa/app.js"></script>
+</body>
+</html>

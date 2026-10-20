@@ -5,6 +5,8 @@
 const sounds = {
   pedido: new Audio('/sounds/bell.mp3'),
   llamado: new Audio('/sounds/llamado-cliente.mp3'),
+  // Aviso suave para el mozo cuando una mesa lo llama (no molesta al resto del salón).
+  mesa: new Audio('/sounds/llamado-mozo.mp3'),
 };
 Object.values(sounds).forEach((a) => (a.preload = 'auto'));
 

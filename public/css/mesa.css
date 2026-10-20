@@ -1,0 +1,22 @@
+/* Celular del cliente en una mesa (QR del mozo). Reutiliza los estilos de seguimiento.css */
+.mesa-input { font-size: 2rem; letter-spacing: 0.08em; }
+.min-h { min-height: 1.25rem; }
+
+.btn-llamar:disabled { opacity: 0.75; }
+
+.pedido-card { padding: 1rem 1.1rem; }
+.pedido-card .estado { display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 600; font-size: 0.9rem; padding: 0.2rem 0.7rem; border-radius: 2rem; background: #f1f3f5; color: #495057; }
+.pedido-card[data-estado='En Preparacion'] .estado { background: #fff4e6; color: #d9480f; }
+.pedido-card[data-estado='Listo'] { box-shadow: 0 0 0 3px rgba(32, 201, 151, 0.45), var(--shadow-sm); }
+.pedido-card[data-estado='Listo'] .estado { background: #20c997; color: #fff; }
+.pedido-card[data-estado='En Mesa'] .estado { background: #d3f9d8; color: #2b8a3e; }
+.pedido-card[data-estado='En Preparacion'] .estado i { animation: latido 1.6s ease-in-out infinite; }
+.pedido-card .items { margin: 0.6rem 0 0; }
+.pedido-card .items li { display: flex; gap: 0.5rem; padding: 0.25rem 0; font-size: 0.92rem; }
+.pedido-card .qty { font-weight: 700; color: var(--brand-dark); min-width: 1.8rem; }
+.pedido-card .sin { color: #c92a2a; font-size: 0.8rem; }
+.pedido-card .extra { color: #087f5b; font-size: 0.8rem; font-weight: 600; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pedido-card .estado i { animation: none !important; }
+}

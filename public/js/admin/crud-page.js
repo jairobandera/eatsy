@@ -21,6 +21,7 @@ import { confirmDialog, debounce, escapeHtml, html, renderPagination, showError,
  * @param {(form:HTMLFormElement, item:object|null)=>void|Promise<void>} [cfg.onOpen]
  * @param {string} [cfg.modalSize]  'modal-lg' | 'modal-xl'
  * @param {(item)=>boolean} [cfg.canDisable]
+ * @param {(saved:object, info:{nuevo:boolean})=>void} [cfg.afterSave]  se llama después de guardar
  */
 export async function createCrudPage(cfg) {
   const user = await mountLayout('admin');
@@ -150,9 +151,9 @@ export async function createCrudPage(cfg) {
     }
     await withLoading(form.querySelector('[type=submit]'), async () => {
       try {
-        if (editing) await api.put(`${cfg.endpoint}/${editing.id}`, body);
-        else await api.post(cfg.endpoint, body);
+        const saved = editing ? await api.put(`${cfg.endpoint}/${editing.id}`, body) : await api.post(cfg.endpoint, body);
         modal.hide();
+        cfg.afterSave?.(saved, { nuevo: !editing });
         toast(editing ? `${capitalize(cfg.singular)} actualizad${cfg.genero || 'o'}` : `${capitalize(cfg.singular)} cread${cfg.genero || 'o'}`);
         if (!editing && state.estado !== 'activos') switchTab('activos');
         else load();

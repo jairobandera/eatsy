@@ -43,7 +43,13 @@ export function toSeguimientoDto(p) {
   };
 }
 
-const CERRADOS = ['Entregado', 'Cancelado'];
+/** Lo que ve el celular de una mesa (QR del mozo): igual que el seguimiento, más mesa y si está pago. */
+export function toMesaDto(p) {
+  const { cliente, ...base } = toSeguimientoDto(p);
+  return { ...base, mesa: p.mesa, mozo_id: p.usuario.id, pagado: p.pago?.estado === 'Completado' };
+}
+
+const CERRADOS = ['Entregado', 'En Mesa', 'Cancelado'];
 
 /** Solo se pueden seguir pedidos de hoy o que todavía estén en curso. */
 const seguible = (p) => p.created_at.slice(0, 10) === today() || !CERRADOS.includes(p.estado);

@@ -11,6 +11,7 @@ import { conflict, notFound, unprocessable } from '../utils/http-error.js';
 import { hashPassword } from '../utils/password.js';
 import { paginated } from '../utils/validator.js';
 import { avisarCatalogo, createCatalogService } from './catalogo.service.js';
+import { nuevoQrToken } from './mesas.service.js';
 import { conPrecios } from './pricing.service.js';
 
 // ───────────── Categorías e ingredientes ─────────────
@@ -23,9 +24,11 @@ const usuariosBase = createCatalogService({
   repo: usuariosRepo,
   entidad: 'usuario',
   notificar: false,
-  toRecord: (data) => {
+  toRecord: async (data, { id } = {}) => {
     const record = { nombre: data.nombre, rol: data.rol };
     if (data.contrasena) record.contrasena = hashPassword(data.contrasena);
+    // Cada mozo tiene su QR de mesas desde que se crea (o desde que pasa a ser mozo).
+    if (data.rol === 'Mozo' && !(id && (await usuariosRepo.findById(id))?.qr_token)) record.qr_token = nuevoQrToken();
     return record;
   },
 });

@@ -12,6 +12,7 @@ export const HOME_BY_ROLE = {
   Cajero: '/caja',
   Cocina: '/cocina',
   Cliente: '/kiosco',
+  Mozo: '/mozo',
 };
 
 // Freno contra fuerza bruta: 5 intentos fallidos por usuario+IP cada 5 minutos.

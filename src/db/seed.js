@@ -9,12 +9,13 @@ import { promocionesRepo } from '../repositories/promociones.repository.js';
 import { addDays, today } from '../utils/dates.js';
 import { hashPassword } from '../utils/password.js';
 import { preciosVigentes, round2 } from '../services/pricing.service.js';
+import { nuevoQrToken } from '../services/mesas.service.js';
 
 /** Carga usuarios, catálogo, promociones, clientes y reglas de puntos. */
 export async function seedBase() {
   await transaction(async () => {
     for (const u of data.usuarios) {
-      await usuariosRepo.insert({ nombre: u.nombre, contrasena: hashPassword(u.contrasena), rol: u.rol, activo: 1 });
+      await usuariosRepo.insert({ nombre: u.nombre, contrasena: hashPassword(u.contrasena), rol: u.rol, qr_token: u.rol === 'Mozo' ? nuevoQrToken() : null, activo: 1 });
     }
 
     const catIds = new Map();

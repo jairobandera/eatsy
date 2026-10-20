@@ -1,0 +1,196 @@
+/* global Swal */
+import { api } from '../core/api.js';
+import { mountLayout } from '../core/layout.js';
+import { PAGO_CLASES, debounce, escapeHtml, estadoBadge, formatTime, html, money, showError, toast } from '../core/ui.js';
+import { atenderLlamado, iniciarAvisosMozo, leerLlamados } from './avisos.js';
+
+/**
+ * Pantalla del mozo: sus mesas abiertas con los pedidos de cada una.
+ *  - Cuando la cocina termina un pedido, suena y se resalta para que lo lleve.
+ *  - Marca "En mesa" al servirlo y registra el cobro (efectivo o tarjeta), por pedido o toda la mesa.
+ *  - Recibe los llamados que hacen los clientes desde el QR de la mesa (sonido discreto).
+ */
+const user = await mountLayout('mozo', { realtime: true, sound: true });
+const esAdmin = user.rol === 'Administrador';
+const app = document.getElementById('app');
+const MAX_MESA = 999;
+
+app.innerHTML = `
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+    <div>
+      <h1 class="page-title h3 mb-0"><i class="bi bi-grid-3x3-gap text-brand me-2"></i>${esAdmin ? 'Mesas de los mozos' : 'Mis mesas'}</h1>
+      <p class="text-muted small mb-0">Los pedidos van directo a la cocina. Cuando estén listos te avisamos para que los lleves.</p>
+    </div>
+    <button class="btn btn-brand rounded-pill px-4" id="btn-nueva"><i class="bi bi-plus-lg me-1"></i>Nueva mesa</button>
+  </div>
+  <div id="llamados" class="mb-3"></div>
+  <div class="row g-3" id="mesas"></div>
+  <div class="empty-state d-none" id="vacio"><i class="bi bi-cup-hot"></i>No tenés mesas abiertas. Tocá <b>Nueva mesa</b> para tomar un pedido.</div>`;
+
+const $mesas = app.querySelector('#mesas');
+const $llamados = app.querySelector('#llamados');
+const pedidos = new Map(); // id → pedido (para las acciones)
+
+const resumenItems = (p) => p.detalles.map((d) => `${d.cantidad}x ${d.producto.nombre}`).join(', ');
+const pagado = (p) => p.pago?.estado === 'Completado';
+
+const pedidoHtml = (p) => html`<li class="pedido-mesa ${p.estado === 'Listo' ? 'listo' : ''}" data-id="${p.id}">
+    <div class="d-flex justify-content-between align-items-start gap-2">
+      <div class="min-w-0">
+        <div class="fw-semibold">${p.codigo} <span class="small text-muted fw-normal">${formatTime(p.created_at)}</span></div>
+        <div class="small text-muted text-truncate-2">${resumenItems(p)}</div>
+      </div>
+      <div class="text-end text-nowrap">
+        <div class="fw-semibold">${money(p.total)}</div>
+        ${estadoBadge(p.estado)}
+      </div>
+    </div>
+    <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
+      <span class="badge rounded-pill ${PAGO_CLASES[p.pago?.estado] || 'text-bg-light'}">${pagado(p) ? `Pagado · ${p.metodo_pago}` : 'Sin cobrar'}</span>
+      <span class="ms-auto"></span>
+      ${p.estado === 'Listo' ? html`<button class="btn btn-sm btn-success rounded-pill" data-en-mesa="${p.id}"><i class="bi bi-check2-circle me-1"></i>Llevado a la mesa</button>` : ''}
+      ${!pagado(p) ? html`<button class="btn btn-sm btn-outline-success rounded-pill" data-cobrar="${p.id}"><i class="bi bi-cash-coin me-1"></i>Cobrar</button>` : ''}
+      ${['Recibido', 'En Preparacion'].includes(p.estado) && !esAdmin ? html`<a class="btn btn-sm btn-outline-primary rounded-pill" href="/mozo/pedido?id=${p.id}" title="Editar"><i class="bi bi-pencil"></i></a>` : ''}
+    </div>
+  </li>`;
+
+const mesaHtml = (m) => {
+  const llamando = leerLlamados().has(m.mesa) && !esAdmin;
+  const hayListos = m.pedidos.some((p) => p.estado === 'Listo');
+  return html`<div class="col-md-6 col-xl-4" data-mesa="${m.mesa}">
+    <article class="card-app mesa-card h-100 d-flex flex-column ${llamando ? 'llamando' : ''} ${hayListos ? 'con-listos' : ''}">
+      <header class="mesa-head">
+        <div>
+          <div class="mesa-num">Mesa ${m.mesa}</div>
+          ${esAdmin ? html`<div class="small opacity-75"><i class="bi bi-person me-1"></i>${m.mozo.nombre}</div>` : ''}
+        </div>
+        <div class="text-end">
+          ${llamando ? html`<span class="badge rounded-pill text-bg-warning"><i class="bi bi-bell-fill me-1"></i>Te llama</span>` : ''}
+          <div class="small">${m.pendiente > 0 ? html`Falta cobrar <b>${money(m.pendiente)}</b>` : html`<i class="bi bi-check2-all me-1"></i>Todo cobrado`}</div>
+        </div>
+      </header>
+      <ul class="list-unstyled mb-0 flex-grow-1">${m.pedidos.map(pedidoHtml)}</ul>
+      ${esAdmin
+        ? ''
+        : html`<footer class="mesa-foot">
+            <a class="btn btn-outline-brand rounded-pill flex-fill" href="/mozo/pedido?mesa=${m.mesa}"><i class="bi bi-plus-lg me-1"></i>Agregar pedido</a>
+            ${m.pendiente > 0 ? html`<button class="btn btn-success rounded-pill flex-fill" data-cobrar-mesa="${m.mesa}" data-total="${m.pendiente}"><i class="bi bi-cash-stack me-1"></i>Cobrar mesa</button>` : ''}
+          </footer>`}
+    </article>
+  </div>`;
+};
+
+function renderLlamados() {
+  const lista = [...leerLlamados().entries()].sort((a, b) => a[1] - b[1]);
+  $llamados.innerHTML = lista
+    .map(
+      ([mesa, fecha]) => html`<div class="alert alert-warning d-flex align-items-center gap-2 py-2 mb-2 llamado-alerta" role="alert">
+        <i class="bi bi-bell-fill fs-5"></i>
+        <div class="flex-grow-1"><b>Mesa ${mesa}</b> te está llamando <span class="small text-muted">· ${new Date(fecha).toLocaleTimeString('es-UY', { hour: '2-digit', minute: '2-digit', hour12: false })}</span></div>
+        <button class="btn btn-sm btn-warning rounded-pill" data-voy="${mesa}"><i class="bi bi-person-walking me-1"></i>Voy</button>
+      </div>`,
+    )
+    .join('');
+}
+
+async function load() {
+  try {
+    const mesas = await api.get('/mozo/mesas');
+    pedidos.clear();
+    mesas.forEach((m) => m.pedidos.forEach((p) => pedidos.set(p.id, p)));
+    $mesas.innerHTML = mesas.map(mesaHtml).join('');
+    app.querySelector('#vacio').classList.toggle('d-none', mesas.length > 0);
+  } catch (err) {
+    $mesas.innerHTML = `<div class="col-12 text-danger">${escapeHtml(err.message)}</div>`;
+  }
+}
+// ───────────── Acciones ─────────────
+async function pedirMetodo(titulo, total) {
+  const r = await Swal.fire({
+    title: titulo,
+    html: `<p class="mb-0">Total: <b>${money(total)}</b></p>`,
+    icon: 'question',
+    showDenyButton: true,
+    showCancelButton: true,
+    confirmButtonText: '<i class="bi bi-cash me-1"></i>Efectivo',
+    denyButtonText: '<i class="bi bi-credit-card me-1"></i>Tarjeta',
+    cancelButtonText: 'Volver',
+    buttonsStyling: false,
+    customClass: { confirmButton: 'btn btn-success mx-1', denyButton: 'btn btn-primary mx-1', cancelButton: 'btn btn-outline-secondary mx-1' },
+  });
+  if (r.isConfirmed) return 'Efectivo';
+  if (r.isDenied) return 'Tarjeta';
+  return null;
+}
+
+$mesas.addEventListener('click', async (e) => {
+  const enMesa = e.target.closest('[data-en-mesa]');
+  const cobrar = e.target.closest('[data-cobrar]');
+  const cobrarMesa = e.target.closest('[data-cobrar-mesa]');
+  try {
+    if (enMesa) {
+      const p = pedidos.get(Number(enMesa.dataset.enMesa));
+      enMesa.disabled = true;
+      await api.patch(`/mozo/pedidos/${p.id}/en-mesa`);
+      toast(`${p.codigo} servido en la mesa ${p.mesa}`);
+      return load();
+    }
+    if (cobrar) {
+      const p = pedidos.get(Number(cobrar.dataset.cobrar));
+      const metodo = await pedirMetodo(`¿Cómo pagó ${p.codigo}?`, p.total);
+      if (!metodo) return;
+      await api.patch(`/mozo/pedidos/${p.id}/cobrar`, { metodo_pago: metodo });
+      toast(`${p.codigo} cobrado (${metodo.toLowerCase()})`);
+      return load();
+    }
+    if (cobrarMesa) {
+      const mesa = Number(cobrarMesa.dataset.cobrarMesa);
+      const metodo = await pedirMetodo(`¿Cómo pagó la mesa ${mesa}?`, Number(cobrarMesa.dataset.total));
+      if (!metodo) return;
+      const r = await api.post(`/mozo/mesas/${mesa}/cobrar`, { metodo_pago: metodo });
+      toast(`Mesa ${mesa} cobrada: ${money(r.total)} (${metodo.toLowerCase()})`);
+      return load();
+    }
+  } catch (err) {
+    if (enMesa) enMesa.disabled = false;
+    showError(err);
+  }
+});
+
+$llamados.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-voy]');
+  if (!b) return;
+  atenderLlamado(Number(b.dataset.voy));
+  renderLlamados();
+  load();
+});
+
+app.querySelector('#btn-nueva').addEventListener('click', async () => {
+  const r = await Swal.fire({
+    title: '¿Qué mesa?',
+    input: 'number',
+    inputAttributes: { min: 1, max: MAX_MESA, inputmode: 'numeric', autofocus: 'autofocus' },
+    inputPlaceholder: 'Número de mesa',
+    showCancelButton: true,
+    confirmButtonText: 'Tomar pedido',
+    cancelButtonText: 'Cancelar',
+    buttonsStyling: false,
+    customClass: { confirmButton: 'btn btn-brand mx-1', cancelButton: 'btn btn-outline-secondary mx-1' },
+    inputValidator: (v) => (Number.isInteger(Number(v)) && Number(v) >= 1 && Number(v) <= MAX_MESA ? null : `Ingresá un número entre 1 y ${MAX_MESA}.`),
+  });
+  if (r.isConfirmed) location.href = `/mozo/pedido?mesa=${Number(r.value)}`;
+});
+
+// ───────────── Tiempo real ─────────────
+const recargar = debounce(load, 250);
+iniciarAvisosMozo({
+  estadoAnterior: (id) => pedidos.get(id)?.estado,
+  onCambio: recargar,
+  onLlamado: () => {
+    renderLlamados();
+    recargar();
+  },
+});
+
+renderLlamados();
+load();

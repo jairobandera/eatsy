@@ -12,7 +12,7 @@ import { today } from '../utils/dates.js';
 import { parseId, validate } from '../utils/validator.js';
 import { crudController, listParams, optionalNumber } from './helpers.js';
 
-const ROLES = ['Administrador', 'Cajero', 'Cocina', 'Cliente'];
+const ROLES = ['Administrador', 'Cajero', 'Cocina', 'Cliente', 'Mozo'];
 
 export const categoriasController = crudController(categoriasService, {
   schema: { nombre: { type: 'string', required: true, maxLength: 255 } },

@@ -5,16 +5,22 @@ import {
   ESTADOS_PAGO,
   MAX_EXTRA,
   ESTADOS_PEDIDO,
+  MAX_MESA,
   METODOS_PAGO,
   actualizarPedido,
   cambiarEstado,
   cambiarEstadoPago,
+  cobrarMesa,
   crearPedido,
   listarLlamados,
+  listarMesas,
   listarPedidosCaja,
   listarPedidosCocina,
   obtenerPedido,
+  pedidoDelMozo,
+  registrarCobro,
 } from '../services/pedidos.service.js';
+import { conflict } from '../utils/http-error.js';
 import { pagination, paginated, parseId, validate } from '../utils/validator.js';
 import { optionalNumber } from './helpers.js';
 
@@ -148,6 +154,59 @@ export const cocinaController = {
   list: async (req, res) => res.json(await listarPedidosCocina({ order: req.query.order === 'desc' ? 'desc' : 'asc' })),
   get: async (req, res) => res.json(await obtenerPedido(parseId(req.params.id))),
   listo: async (req, res) => res.json(await cambiarEstado(parseId(req.params.id), 'Listo')),
+};
+
+// ───────────── Mozo (pedidos por mesa) ─────────────
+const mesaSchema = { type: 'integer', required: true, min: 1, max: MAX_MESA, label: 'mesa' };
+const metodoSchema = { metodo_pago: pedidoSchema.metodo_pago };
+const mesaParam = (req) => validate({ mesa: req.params.mesa }, { mesa: mesaSchema }).mesa;
+
+export const mozoController = {
+  /** Mesas abiertas del mozo (el administrador ve las de todos). */
+  mesas: async (req, res) => res.json(await listarMesas({ mozoId: req.user.rol === 'Administrador' ? null : req.user.id })),
+
+  get: async (req, res) => res.json(await pedidoDelMozo(parseId(req.params.id), req.user)),
+
+  /** El pedido del mozo va directo a la cocina (y aparece en la caja). */
+  create: async (req, res) => {
+    const data = validate(req.body, { mesa: mesaSchema, items: itemsSchema, codigo_cupon: cuponSchema });
+    const pedido = await crearPedido({
+      usuario: req.user,
+      items: data.items,
+      metodoPago: 'Efectivo', // se confirma al cobrar
+      origen: 'Mozo',
+      mesa: data.mesa,
+      enviarACocina: true,
+      codigoCupon: data.codigo_cupon,
+      ip: req.ip,
+    });
+    res.status(201).json(pedido);
+  },
+
+  update: async (req, res) => {
+    const actual = await pedidoDelMozo(parseId(req.params.id), req.user, { withDetalles: false });
+    const data = validate(req.body, { mesa: mesaSchema, items: itemsSchema, codigo_cupon: cuponSchema });
+    const codigoCupon = 'codigo_cupon' in req.body ? data.codigo_cupon : undefined;
+    res.json(await actualizarPedido(actual.id, { items: data.items, metodoPago: actual.metodo_pago, mesa: data.mesa, codigoCupon, ip: req.ip }));
+  },
+
+  /** El mozo solo marca que llevó el pedido a la mesa. */
+  enMesa: async (req, res) => {
+    const pedido = await pedidoDelMozo(parseId(req.params.id), req.user, { withDetalles: false });
+    if (pedido.estado === 'Cancelado') throw conflict('El pedido está cancelado.');
+    res.json(await cambiarEstado(pedido.id, 'En Mesa'));
+  },
+
+  cobrar: async (req, res) => {
+    const pedido = await pedidoDelMozo(parseId(req.params.id), req.user, { withDetalles: false });
+    const { metodo_pago } = validate(req.body, metodoSchema);
+    res.json(await registrarCobro(pedido.id, metodo_pago));
+  },
+
+  cobrarMesa: async (req, res) => {
+    const { metodo_pago } = validate(req.body, metodoSchema);
+    res.json(await cobrarMesa({ usuario: req.user, mesa: mesaParam(req), metodoPago: metodo_pago }));
+  },
 };
 
 // ───────────── Pantalla pública de llamados ─────────────

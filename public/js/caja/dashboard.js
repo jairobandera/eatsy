@@ -3,7 +3,7 @@ import { mountLayout } from '../core/layout.js';
 import { createRealtime } from '../core/realtime.js';
 import { play } from '../core/sound.js';
 import { ESTADO_LABEL, debounce, escapeHtml, estadoBadge, formatTime, html, money, renderPagination, toast } from '../core/ui.js';
-import { CERRADOS, ESTADOS, cambiarEstado, cambiarPago, clienteNombre, origenBadge, pagoSelect, verDetalle } from './shared.js';
+import { CERRADOS, cambiarEstado, cambiarPago, clienteNombre, estadoEntrega, estadosPara, origenBadge, pagoSelect, verDetalle } from './shared.js';
 
 await mountLayout('caja', { realtime: true, sound: true });
 const app = document.getElementById('app');
@@ -12,7 +12,7 @@ app.innerHTML = `
   <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
     <div>
       <h1 class="page-title h3"><i class="bi bi-receipt text-brand me-2"></i>Pedidos de hoy</h1>
-      <p class="text-muted small mb-0">Los pedidos nuevos del kiosco aparecen automáticamente. Escaneá el código del ticket para buscarlo.</p>
+      <p class="text-muted small mb-0">Los pedidos nuevos del kiosco y de los mozos aparecen automáticamente. Escaneá el código del ticket para buscarlo.</p>
     </div>
     <div class="d-flex flex-wrap gap-2">
       <a href="/caja/entregados" class="btn btn-outline-secondary rounded-pill"><i class="bi bi-bag-check me-1"></i>Entregados</a>
@@ -56,10 +56,14 @@ const state = { page: 1, search: '', vista: 'activos', pedidos: new Map() };
 
 const accionesEstado = (p) => {
   if (CERRADOS.includes(p.estado)) return '';
-  const siguientes = ESTADOS.filter((e) => e !== p.estado);
+  const siguientes = estadosPara(p).filter((e) => e !== p.estado);
   return html`
     ${p.estado === 'Recibido' ? html`<button class="btn btn-sm btn-warning rounded-pill" data-cocina="${p.id}" title="Enviar a cocina"><i class="bi bi-fire"></i><span class="d-none d-xl-inline ms-1">Cocina</span></button>` : ''}
-    ${p.estado === 'Listo' ? html`<button class="btn btn-sm btn-success rounded-pill" data-entregar="${p.id}"><i class="bi bi-bag-check"></i><span class="d-none d-xl-inline ms-1">Entregar</span></button>` : ''}
+    ${p.estado === 'Listo'
+      ? p.origen === 'Mozo'
+        ? html`<button class="btn btn-sm btn-success rounded-pill" data-entregar="${p.id}" title="El mozo lo llevó a la mesa"><i class="bi bi-check2-circle"></i><span class="d-none d-xl-inline ms-1">En mesa</span></button>`
+        : html`<button class="btn btn-sm btn-success rounded-pill" data-entregar="${p.id}"><i class="bi bi-bag-check"></i><span class="d-none d-xl-inline ms-1">Entregar</span></button>`
+      : ''}
     <div class="dropdown d-inline-block">
       <button class="btn btn-sm btn-outline-secondary rounded-pill dropdown-toggle" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' aria-expanded="false">Estado</button>
       <ul class="dropdown-menu dropdown-menu-end">
@@ -73,7 +77,7 @@ const rowHtml = (p) =>
     <td class="fw-semibold text-nowrap">${p.codigo}</td>
     <td class="text-muted">${formatTime(p.created_at)}</td>
     <td>${origenBadge(p)}</td>
-    <td class="d-none d-lg-table-cell">${p.cliente ? clienteNombre(p.cliente) : html`<span class="text-muted">—</span>`}</td>
+    <td class="d-none d-lg-table-cell">${p.cliente ? clienteNombre(p.cliente) : p.origen === 'Mozo' ? html`<span class="small text-muted"><i class="bi bi-person me-1"></i>${p.usuario.nombre}</span>` : html`<span class="text-muted">—</span>`}</td>
     <td class="fw-medium text-nowrap">${money(p.total)}<div class="small text-muted">${p.metodo_pago}</div></td>
     <td>${estadoBadge(p.estado)}</td>
     <td style="min-width:130px">${pagoSelect(p)}</td>
@@ -137,7 +141,10 @@ tbody.addEventListener('click', async (e) => {
   let pedido;
   let nuevo;
   if (cocina) [pedido, nuevo] = [state.pedidos.get(Number(cocina.dataset.cocina)), 'En Preparacion'];
-  if (entregar) [pedido, nuevo] = [state.pedidos.get(Number(entregar.dataset.entregar)), 'Entregado'];
+  if (entregar) {
+    pedido = state.pedidos.get(Number(entregar.dataset.entregar));
+    nuevo = pedido && estadoEntrega(pedido);
+  }
   if (estado) [pedido, nuevo] = [state.pedidos.get(Number(estado.dataset.id)), estado.dataset.estado];
   if (!pedido) return;
   const actualizado = await cambiarEstado(pedido, nuevo);
@@ -193,7 +200,8 @@ rt.on('pedido:creado', (p) => {
 rt.on('pedido:estado', (p) => {
   if (p.estado === 'Listo') {
     play('pedido');
-    toast(`${p.codigo} está listo para entregar`, 'info', { timer: 4000 });
+    if (p.origen === 'Mozo') toast(`${p.codigo} (mesa ${p.mesa}) está listo`, 'info', { text: `Lo lleva ${p.usuario.nombre}.`, timer: 4000 });
+    else toast(`${p.codigo} está listo para entregar`, 'info', { timer: 4000 });
   }
   upsert(p);
 });

@@ -3,17 +3,20 @@ import { transaction } from '../db/connection.js';
 import { clientesRepo, reglasPuntosRepo } from '../repositories/clientes.repository.js';
 import { pedidosRepo } from '../repositories/pedidos.repository.js';
 import { productosRepo } from '../repositories/productos.repository.js';
-import { badRequest, conflict, notFound, unprocessable } from '../utils/http-error.js';
+import { badRequest, conflict, forbidden, notFound, unprocessable } from '../utils/http-error.js';
 import { today } from '../utils/dates.js';
 import { publish } from '../websocket/realtime.js';
 import { preciosVigentes, round2 } from './pricing.service.js';
-import { toSeguimientoDto } from './seguimiento.service.js';
+import { toMesaDto, toSeguimientoDto } from './seguimiento.service.js';
 import { buscarCupon, descuentoCupon } from './cupones.service.js';
 
-export const ESTADOS_PEDIDO = ['Cancelado', 'Recibido', 'En Preparacion', 'Listo', 'Entregado'];
+export const ESTADOS_PEDIDO = ['Cancelado', 'Recibido', 'En Preparacion', 'Listo', 'Entregado', 'En Mesa'];
 export const ESTADOS_PAGO = ['Completado', 'Pendiente', 'Fallido'];
 export const METODOS_PAGO = ['Efectivo', 'Tarjeta'];
-const CERRADOS = ['Entregado', 'Cancelado'];
+/** "Entregado" = retirado en el mostrador; "En Mesa" = el mozo lo llevó a la mesa. */
+export const ENTREGADOS = ['Entregado', 'En Mesa'];
+export const CERRADOS = [...ENTREGADOS, 'Cancelado'];
+export const MAX_MESA = 999;
 
 // Sin 0/O ni 1/I para que el código sea fácil de dictar y leer.
 const ALFABETO = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -38,6 +41,22 @@ export function toPublicDto(p) {
       ? { nombre: p.cliente.nombre, apellido: p.cliente.apellido, cedula: `****${String(p.cliente.cedula).slice(-4)}` }
       : null,
   };
+}
+
+/**
+ * Publica un evento de pedido a cada pantalla con los datos que le corresponden.
+ * Los pedidos de mozo no van a la pantalla de llamados: avisan al mozo y a los celulares de la mesa.
+ */
+function publicarPedido(type, pedido) {
+  const deMozo = pedido.origen === 'Mozo';
+  const cambioVisible = type === 'pedido:estado' || type === 'pedido:actualizado';
+  publish(type, {
+    staff: pedido,
+    publico: cambioVisible && !deMozo ? toPublicDto(pedido) : undefined,
+    seguimiento: cambioVisible ? toSeguimientoDto(pedido) : undefined,
+    mozo: deMozo ? { ...pedido, mozo_id: pedido.usuario.id } : undefined,
+    mesa: deMozo ? toMesaDto(pedido) : undefined,
+  });
 }
 
 /** Máximo de unidades extra de un mismo ingrediente por producto. */
@@ -110,8 +129,12 @@ async function validarCliente(clienteId) {
   return cliente.id;
 }
 
-export async function crearPedido({ usuario, clienteId = null, items, metodoPago, origen, codigoCupon = null, ip }) {
+/**
+ * mesa: solo pedidos de mozo. enviarACocina: el pedido pasa directo a "En Preparacion".
+ */
+export async function crearPedido({ usuario, clienteId = null, items, metodoPago, origen, mesa = null, enviarACocina = false, codigoCupon = null, ip }) {
   if (!items?.length) throw badRequest('El pedido debe tener al menos un producto.');
+  if (origen === 'Mozo' && !mesa) throw unprocessable('Indicá el número de mesa.');
 
   const pedidoId = await transaction(async () => {
     const lineas = await construirLineas(items);
@@ -121,6 +144,7 @@ export async function crearPedido({ usuario, clienteId = null, items, metodoPago
       usuario_id: usuario.id,
       cliente_id: await validarCliente(clienteId),
       origen,
+      mesa: origen === 'Mozo' ? mesa : null,
       metodo_pago: metodoPago,
       estado: 'Recibido',
       codigo: await generarCodigo(),
@@ -132,14 +156,14 @@ export async function crearPedido({ usuario, clienteId = null, items, metodoPago
   });
 
   const pedido = await pedidosRepo.findById(pedidoId);
-  publish('pedido:creado', { staff: pedido });
-  return pedido;
+  publicarPedido('pedido:creado', pedido);
+  return enviarACocina ? cambiarEstado(pedidoId, 'En Preparacion') : pedido;
 }
 
 /**
  * @param {string|null|undefined} codigoCupon  undefined = mantener el cupón actual; null = quitarlo
  */
-export async function actualizarPedido(id, { items, metodoPago, clienteId, codigoCupon, ip }) {
+export async function actualizarPedido(id, { items, metodoPago, clienteId, codigoCupon, mesa, ip }) {
   await transaction(async () => {
     const actual = await pedidosRepo.findById(id, { withDetalles: false, forUpdate: true });
     if (!actual) throw notFound('Pedido no encontrado.');
@@ -159,12 +183,13 @@ export async function actualizarPedido(id, { items, metodoPago, clienteId, codig
 
     const cambios = { ...totales, metodo_pago: metodoPago };
     if (clienteId !== undefined) cambios.cliente_id = await validarCliente(clienteId);
+    if (mesa && actual.origen === 'Mozo') cambios.mesa = mesa;
     await pedidosRepo.update(id, cambios);
     await pedidosRepo.updatePago(id, { monto: total, tipo: metodoPago });
   });
 
   const pedido = await pedidosRepo.findById(id);
-  publish('pedido:actualizado', { staff: pedido, publico: toPublicDto(pedido), seguimiento: toSeguimientoDto(pedido) });
+  publicarPedido('pedido:actualizado', pedido);
   return pedido;
 }
 
@@ -184,15 +209,16 @@ export async function cambiarEstado(id, estado, { completarPago = false } = {}) 
   await transaction(async () => {
     const pedido = await pedidosRepo.findById(id, { withDetalles: false, forUpdate: true });
     if (!pedido) throw notFound('Pedido no encontrado.');
+    if (estado === 'En Mesa' && pedido.origen !== 'Mozo') throw unprocessable('Solo los pedidos tomados por un mozo pueden quedar "En mesa".');
     await pedidosRepo.update(id, { estado });
-    if (estado === 'Entregado') {
+    if (ENTREGADOS.includes(estado)) {
       await otorgarPuntos(pedido);
       if (completarPago && pedido.pago?.estado !== 'Completado') await pedidosRepo.updatePago(id, { estado: 'Completado' });
     }
   });
 
   const pedido = await pedidosRepo.findById(id);
-  publish('pedido:estado', { staff: pedido, publico: toPublicDto(pedido), seguimiento: toSeguimientoDto(pedido) });
+  publicarPedido('pedido:estado', pedido);
   return pedido;
 }
 
@@ -202,7 +228,22 @@ export async function cambiarEstadoPago(pedidoId, estado) {
   if (!pedido?.pago) throw notFound('Pago no encontrado.');
   await pedidosRepo.updatePago(pedidoId, { estado });
   const actualizado = await pedidosRepo.findById(pedidoId);
-  publish('pago:estado', { staff: actualizado });
+  publicarPedido('pago:estado', actualizado);
+  return actualizado;
+}
+
+/** Cobro registrado por el mozo: fija el método (efectivo/tarjeta) y deja el pago completado. */
+export async function registrarCobro(pedidoId, metodoPago) {
+  if (!METODOS_PAGO.includes(metodoPago)) throw unprocessable('Método de pago inválido.');
+  await transaction(async () => {
+    const pedido = await pedidosRepo.findById(pedidoId, { withDetalles: false, forUpdate: true });
+    if (!pedido?.pago) throw notFound('Pago no encontrado.');
+    if (pedido.estado === 'Cancelado') throw conflict('El pedido está cancelado.');
+    await pedidosRepo.update(pedidoId, { metodo_pago: metodoPago });
+    await pedidosRepo.updatePago(pedidoId, { tipo: metodoPago, estado: 'Completado' });
+  });
+  const actualizado = await pedidosRepo.findById(pedidoId);
+  publicarPedido('pago:estado', actualizado);
   return actualizado;
 }
 
@@ -215,8 +256,8 @@ export async function obtenerPedido(id) {
 /** Pedidos del día para la caja. vista: 'activos' (no entregados) | 'entregados' | 'todos' */
 export function listarPedidosCaja({ vista = 'activos', search, page, perPage }) {
   const opts = { fecha: today(), search, limit: perPage, offset: (page - 1) * perPage };
-  if (vista === 'activos') Object.assign(opts, { excluirEstados: ['Entregado', 'Cancelado'] });
-  if (vista === 'entregados') Object.assign(opts, { estados: ['Entregado'], fechaCampo: 'updated_at' });
+  if (vista === 'activos') Object.assign(opts, { excluirEstados: CERRADOS });
+  if (vista === 'entregados') Object.assign(opts, { estados: ENTREGADOS, fechaCampo: 'updated_at' });
   if (vista === 'cancelados') Object.assign(opts, { estados: ['Cancelado'] });
   return pedidosRepo.list(opts);
 }
@@ -230,8 +271,43 @@ export async function listarPedidosCocina({ order = 'asc' } = {}) {
 export async function listarLlamados() {
   const hoy = today();
   const [preparando, listos] = await Promise.all([
-    pedidosRepo.list({ estados: ['En Preparacion'], fecha: hoy, order: 'asc' }),
-    pedidosRepo.list({ estados: ['Listo'], fecha: hoy, fechaCampo: 'updated_at' }),
+    pedidosRepo.list({ estados: ['En Preparacion'], fecha: hoy, order: 'asc', excluirOrigen: 'Mozo' }),
+    pedidosRepo.list({ estados: ['Listo'], fecha: hoy, fechaCampo: 'updated_at', excluirOrigen: 'Mozo' }),
   ]);
   return { preparando: preparando.rows.map(toPublicDto), listos: listos.rows.map(toPublicDto) };
+}
+
+// ───────────── Mozos ─────────────
+
+/** Mesas abiertas agrupadas: [{ mesa, mozo, pedidos, total, pendiente }]. mozoId null = todas (administrador). */
+export async function listarMesas({ mozoId = null, mesa } = {}) {
+  const pedidos = await pedidosRepo.deMesasAbiertas({ mozoId, mesa, cerrados: ENTREGADOS, hoy: today() });
+  const porMesa = new Map();
+  for (const p of pedidos) {
+    const key = `${p.usuario.id}:${p.mesa}`;
+    if (!porMesa.has(key)) porMesa.set(key, { mesa: p.mesa, mozo: { id: p.usuario.id, nombre: p.usuario.nombre }, pedidos: [] });
+    porMesa.get(key).pedidos.push(p);
+  }
+  return [...porMesa.values()].map((m) => ({
+    ...m,
+    total: round2(m.pedidos.reduce((s, p) => s + p.total, 0)),
+    pendiente: round2(m.pedidos.filter((p) => p.pago?.estado !== 'Completado').reduce((s, p) => s + p.total, 0)),
+  }));
+}
+
+/** Pedido tomado por este mozo (el administrador puede ver los de cualquier mozo). */
+export async function pedidoDelMozo(id, usuario, { withDetalles = true } = {}) {
+  const pedido = await pedidosRepo.findById(id, { withDetalles });
+  if (!pedido || pedido.origen !== 'Mozo') throw notFound('Pedido no encontrado.');
+  if (usuario.rol !== 'Administrador' && pedido.usuario.id !== usuario.id) throw forbidden('Este pedido lo tomó otro mozo.');
+  return pedido;
+}
+
+/** Cobra de una vez todo lo pendiente de una mesa del mozo. */
+export async function cobrarMesa({ usuario, mesa, metodoPago }) {
+  const [abierta] = await listarMesas({ mozoId: usuario.id, mesa });
+  const pendientes = (abierta?.pedidos || []).filter((p) => p.pago?.estado !== 'Completado');
+  if (!pendientes.length) throw conflict(`La mesa ${mesa} no tiene nada pendiente de cobro.`);
+  for (const p of pendientes) await registrarCobro(p.id, metodoPago);
+  return { mesa, cobrados: pendientes.length, total: round2(pendientes.reduce((s, p) => s + p.total, 0)) };
 }
