@@ -47,3 +47,10 @@ test('seguimiento: el código se acepta con o sin "PED-", en minúsculas o con e
   for (const input of ['PED-AB12', 'ped-ab12', 'ab12', ' ped ab12 ', 'PEDAB12']) assert.equal(normalizarCodigo(input), 'PED-AB12');
   assert.equal(normalizarCodigo('PEDK'), 'PED-PEDK'); // un código que empieza con P-E-D no se recorta
 });
+
+test('cocina: un producto va a la cocina salvo que alguna categoría sea "sin cocina"', async () => {
+  const { vaACocina } = await import('../src/services/pedidos.service.js');
+  assert.equal(vaACocina({ categorias: [{ va_a_cocina: true }, { va_a_cocina: true }] }), true);
+  assert.equal(vaACocina({ categorias: [{ va_a_cocina: false }, { va_a_cocina: true }] }), false);
+  assert.equal(vaACocina({ categorias: [] }), true);
+});

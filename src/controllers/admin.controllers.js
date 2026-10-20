@@ -15,7 +15,10 @@ import { crudController, listParams, optionalNumber } from './helpers.js';
 const ROLES = ['Administrador', 'Cajero', 'Cocina', 'Cliente', 'Mozo'];
 
 export const categoriasController = crudController(categoriasService, {
-  schema: { nombre: { type: 'string', required: true, maxLength: 255 } },
+  schema: {
+    nombre: { type: 'string', required: true, maxLength: 255 },
+    va_a_cocina: { type: 'boolean', default: true, label: 'se prepara en cocina' },
+  },
 });
 
 export const ingredientesController = crudController(ingredientesService, {

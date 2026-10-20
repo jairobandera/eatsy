@@ -82,11 +82,7 @@ document.body.insertAdjacentHTML(
         <p class="small mt-2 mb-0">El cliente lo escanea, indica su número de mesa, ve el estado de su pedido y puede llamar al mozo.</p>
         <div class="alert alert-warning small text-start mt-3 mb-0 d-none" id="qr-inactivo"><i class="bi bi-exclamation-triangle me-1"></i>El usuario está deshabilitado: el QR no funciona hasta que lo habilites.</div>
       </div>
-      <div class="modal-footer flex-wrap">
-        <div class="input-group input-group-sm me-auto" style="max-width: 180px">
-          <span class="input-group-text">Copias</span>
-          <input type="number" class="form-control" id="qr-copias" min="1" max="12" value="4" aria-label="Copias a imprimir">
-        </div>
+      <div class="modal-footer">
         <a class="btn btn-outline-secondary rounded-pill" id="qr-descargar" download><i class="bi bi-download me-1"></i>Descargar</a>
         <button class="btn btn-brand rounded-pill" id="qr-imprimir"><i class="bi bi-printer me-1"></i>Imprimir</button>
       </div>
@@ -114,10 +110,9 @@ async function verQr(id, { recienCreado = false } = {}) {
   modal.show();
 }
 
-/** Imprime tarjetas con el QR (varias por hoja) en un iframe oculto. */
+/** Imprime una tarjeta con el QR en un iframe oculto. */
 function imprimir() {
   if (!actual) return;
-  const copias = Math.min(12, Math.max(1, Number(modalEl.querySelector('#qr-copias').value) || 1));
   const tarjeta = `<div class="tarjeta">
       <img src="/img/logo.png" alt="" class="logo">
       <div class="qr">${actual.svg}</div>
@@ -131,15 +126,14 @@ function imprimir() {
       @page { size: A4; margin: 10mm; }
       * { box-sizing: border-box; }
       body { margin: 0; font-family: Poppins, system-ui, sans-serif; color: #14171a; }
-      .hoja { display: grid; grid-template-columns: 1fr 1fr; gap: 8mm; }
-      .tarjeta { border: 1px dashed #adb5bd; border-radius: 4mm; padding: 6mm; text-align: center; break-inside: avoid; }
-      .logo { height: 12mm; }
-      .qr svg { width: 55mm; height: 55mm; display: block; margin: 3mm auto; }
-      h2 { font-size: 13pt; margin: 2mm 0 1mm; }
-      p { font-size: 9pt; margin: 0 0 3mm; color: #495057; }
-      .mozo { font-size: 10pt; }
-      .mesa { font-size: 11pt; margin-top: 3mm; font-weight: 600; }
-    </style></head><body><div class="hoja">${tarjeta.repeat(copias)}</div></body></html>`;
+      .tarjeta { width: 110mm; margin: 0 auto; border: 1px dashed #adb5bd; border-radius: 5mm; padding: 9mm; text-align: center; }
+      .logo { height: 16mm; }
+      .qr svg { width: 80mm; height: 80mm; display: block; margin: 4mm auto; }
+      h2 { font-size: 17pt; margin: 2mm 0 1mm; }
+      p { font-size: 11pt; margin: 0 0 4mm; color: #495057; }
+      .mozo { font-size: 12pt; }
+      .mesa { font-size: 13pt; margin-top: 4mm; font-weight: 600; }
+    </style></head><body>${tarjeta}</body></html>`;
 
   const iframe = document.createElement('iframe');
   iframe.style.cssText = 'position:fixed;width:0;height:0;border:0;right:0;bottom:0';

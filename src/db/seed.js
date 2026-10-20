@@ -19,7 +19,9 @@ export async function seedBase() {
     }
 
     const catIds = new Map();
-    for (const nombre of data.categorias) catIds.set(nombre, await categoriasRepo.insert({ nombre, activo: 1 }));
+    for (const nombre of data.categorias) {
+      catIds.set(nombre, await categoriasRepo.insert({ nombre, va_a_cocina: data.categoriasSinCocina.includes(nombre) ? 0 : 1, activo: 1 }));
+    }
 
     const ingIds = new Map();
     for (const [nombre, descripcion] of data.ingredientes) {

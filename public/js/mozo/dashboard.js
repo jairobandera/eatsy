@@ -1,7 +1,7 @@
 /* global Swal */
 import { api } from '../core/api.js';
 import { mountLayout } from '../core/layout.js';
-import { PAGO_CLASES, debounce, escapeHtml, estadoBadge, formatTime, html, money, showError, toast } from '../core/ui.js';
+import { PAGO_CLASES, confirmDialog, debounce, escapeHtml, estadoBadge, formatTime, html, money, showError, toast } from '../core/ui.js';
 import { atenderLlamado, iniciarAvisosMozo, leerLlamados } from './avisos.js';
 
 /**
@@ -39,6 +39,7 @@ const pedidoHtml = (p) => html`<li class="pedido-mesa ${p.estado === 'Listo' ? '
       <div class="min-w-0">
         <div class="fw-semibold">${p.codigo} <span class="small text-muted fw-normal">${formatTime(p.created_at)}</span></div>
         <div class="small text-muted text-truncate-2">${resumenItems(p)}</div>
+        ${p.requiere_cocina === false && !['Listo', 'En Mesa'].includes(p.estado) ? html`<div class="small text-info-emphasis"><i class="bi bi-cup-straw me-1"></i>Lo prepara la caja</div>` : ''}
       </div>
       <div class="text-end text-nowrap">
         <div class="fw-semibold">${money(p.total)}</div>
@@ -74,7 +75,9 @@ const mesaHtml = (m) => {
         ? ''
         : html`<footer class="mesa-foot">
             <a class="btn btn-outline-brand rounded-pill flex-fill" href="/mozo/pedido?mesa=${m.mesa}"><i class="bi bi-plus-lg me-1"></i>Agregar pedido</a>
-            ${m.pendiente > 0 ? html`<button class="btn btn-success rounded-pill flex-fill" data-cobrar-mesa="${m.mesa}" data-total="${m.pendiente}"><i class="bi bi-cash-stack me-1"></i>Cobrar mesa</button>` : ''}
+            ${m.pendiente > 0
+              ? html`<button class="btn btn-success rounded-pill flex-fill" data-cobrar-mesa="${m.mesa}" data-total="${m.pendiente}"><i class="bi bi-cash-stack me-1"></i>Cobrar mesa</button>`
+              : html`<button class="btn btn-outline-secondary rounded-pill flex-fill" data-liberar="${m.mesa}" title="Los clientes pagaron y se fueron"><i class="bi bi-door-open me-1"></i>Liberar mesa</button>`}
           </footer>`}
     </article>
   </div>`;
@@ -127,7 +130,9 @@ $mesas.addEventListener('click', async (e) => {
   const enMesa = e.target.closest('[data-en-mesa]');
   const cobrar = e.target.closest('[data-cobrar]');
   const cobrarMesa = e.target.closest('[data-cobrar-mesa]');
+  const liberar = e.target.closest('[data-liberar]');
   try {
+    if (liberar) return liberarMesa(Number(liberar.dataset.liberar));
     if (enMesa) {
       const p = pedidos.get(Number(enMesa.dataset.enMesa));
       enMesa.disabled = true;
@@ -149,13 +154,36 @@ $mesas.addEventListener('click', async (e) => {
       if (!metodo) return;
       const r = await api.post(`/mozo/mesas/${mesa}/cobrar`, { metodo_pago: metodo });
       toast(`Mesa ${mesa} cobrada: ${money(r.total)} (${metodo.toLowerCase()})`);
-      return load();
+      await load();
+      // Si quedó algo sin marcar como servido, la mesa sigue abierta: ofrecemos liberarla.
+      if ($mesas.querySelector(`[data-mesa="${mesa}"]`)) liberarMesa(mesa, { trasCobro: true });
+      return;
     }
   } catch (err) {
     if (enMesa) enMesa.disabled = false;
     showError(err);
   }
 });
+
+/** Los clientes pagaron y se fueron: lo que quedaba pasa a "En mesa" y la mesa desaparece. */
+async function liberarMesa(mesa, { trasCobro = false } = {}) {
+  const ok = await confirmDialog({
+    title: trasCobro ? `¿Los clientes de la mesa ${mesa} ya se fueron?` : `¿Liberar la mesa ${mesa}?`,
+    text: 'Los pedidos que quedan se marcan como servidos y la mesa queda libre para los próximos clientes.',
+    confirmText: 'Liberar mesa',
+    cancelText: trasCobro ? 'Todavía no' : 'Cancelar',
+  });
+  if (!ok) return;
+  try {
+    await api.post(`/mozo/mesas/${mesa}/liberar`, {});
+    atenderLlamado(mesa);
+    renderLlamados();
+    toast(`Mesa ${mesa} liberada`);
+    load();
+  } catch (err) {
+    showError(err, 'No se pudo liberar la mesa');
+  }
+}
 
 $llamados.addEventListener('click', (e) => {
   const b = e.target.closest('[data-voy]');

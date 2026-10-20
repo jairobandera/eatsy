@@ -3,7 +3,7 @@
  * aplican lo que falte. Así una base creada con una versión anterior se actualiza sola.
  */
 
-import { preciosExtra } from './seed-data.js';
+import { categoriasSinCocina, preciosExtra } from './seed-data.js';
 
 async function columnExists(conn, table, column) {
   const [rows] = await conn.query(
@@ -69,4 +69,11 @@ export async function runMigrations(conn) {
   if (!(await indexExists(conn, 'pedidos', 'idx_pedidos_mesa'))) {
     await conn.query('ALTER TABLE pedidos ADD INDEX idx_pedidos_mesa (usuario_id, mesa)');
   }
+
+  // Cocina solo recibe lo que se elabora: bebidas, postres, etc. los despacha la caja.
+  if (await addColumn(conn, 'categorias', 'va_a_cocina', 'TINYINT(1) NOT NULL DEFAULT 1 AFTER nombre')) {
+    // Base existente: valores sugeridos (se pueden cambiar en Admin → Categorías).
+    await conn.query('UPDATE categorias SET va_a_cocina = 0 WHERE nombre IN (?)', [categoriasSinCocina]);
+  }
+  await addColumn(conn, 'detalle_pedido', 'para_cocina', 'TINYINT(1) NOT NULL DEFAULT 1 AFTER subtotal');
 }

@@ -5,7 +5,10 @@ import { ESTADO_LABEL, PAGO_CLASES, estadoBadge, escapeHtml, formatDateTime, htm
 export const ESTADOS = ['Recibido', 'En Preparacion', 'Listo', 'Entregado', 'Cancelado'];
 export const CERRADOS = ['Entregado', 'En Mesa', 'Cancelado'];
 /** Los pedidos de mozo no se retiran en el mostrador: terminan "En mesa". */
-export const estadosPara = (p) => (p.origen === 'Mozo' ? ['Recibido', 'En Preparacion', 'Listo', 'En Mesa', 'Cancelado'] : ESTADOS);
+export const estadosPara = (p) =>
+  (p.origen === 'Mozo' ? ['Recibido', 'En Preparacion', 'Listo', 'En Mesa', 'Cancelado'] : ESTADOS).filter(
+    (e) => e !== 'En Preparacion' || p.requiere_cocina !== false,
+  );
 /** Estado final de un pedido listo: "Entregado" (mostrador) o "En Mesa" (mozo). */
 export const estadoEntrega = (p) => (p.origen === 'Mozo' ? 'En Mesa' : 'Entregado');
 
@@ -17,6 +20,10 @@ export const origenBadge = (p) =>
     : p.origen === 'Mozo'
       ? html`<span class="badge rounded-pill text-bg-light border" title="Mozo: ${p.usuario?.nombre || ''}"><i class="bi bi-grid-3x3-gap me-1"></i>Mesa ${p.mesa}</span>`
       : html`<span class="badge rounded-pill text-bg-light border"><i class="bi bi-person-badge me-1"></i>Caja</span>`;
+
+/** Insignia para lo que no va a la cocina (lo prepara la caja). */
+export const lineaCaja = (d) =>
+  d.para_cocina === false ? html` <span class="badge rounded-pill text-bg-info align-middle"><i class="bi bi-cup-straw me-1"></i>Caja</span>` : '';
 
 export const lineaQuitados = (d) => (d.quitados.length ? html`<div class="small text-danger">Sin: ${d.quitados.map((q) => q.nombre).join(', ')}</div>` : '');
 export const lineaExtras = (d) =>
@@ -136,7 +143,7 @@ function renderDetalle(p) {
     <div class="table-responsive"><table class="table table-sm align-middle">
       <thead class="table-light"><tr><th>Producto</th><th class="text-center">Cant.</th><th class="text-end">Precio</th><th class="text-end">Subtotal</th></tr></thead>
       <tbody>${p.detalles.map(
-        (d) => html`<tr><td><div class="fw-medium">${d.producto.nombre}</div>${lineaExtras(d)}${lineaQuitados(d)}</td>
+        (d) => html`<tr><td><div class="fw-medium">${d.producto.nombre}${lineaCaja(d)}</div>${lineaExtras(d)}${lineaQuitados(d)}</td>
           <td class="text-center">${d.cantidad}</td>
           <td class="text-end">${money(d.precio_unitario)}${d.descuento ? html`<div class="small text-success">-${money(d.descuento / d.cantidad)} promo</div>` : ''}</td>
           <td class="text-end fw-medium">${money(d.subtotal)}</td></tr>`,
@@ -153,7 +160,8 @@ function renderDetalle(p) {
   footer.innerHTML = html`
     <button class="btn btn-outline-secondary rounded-pill me-auto" data-act="print"><i class="bi bi-printer me-1"></i>Comprobante</button>
     ${!cerrado ? html`<a class="btn btn-outline-primary rounded-pill" href="/caja/pedido?id=${p.id}"><i class="bi bi-pencil me-1"></i>Editar</a>` : ''}
-    ${p.estado === 'Recibido' ? html`<button class="btn btn-warning rounded-pill" data-act="En Preparacion"><i class="bi bi-fire me-1"></i>Enviar a cocina</button>` : ''}
+    ${p.estado === 'Recibido' && p.requiere_cocina !== false ? html`<button class="btn btn-warning rounded-pill" data-act="En Preparacion"><i class="bi bi-fire me-1"></i>Enviar a cocina</button>` : ''}
+    ${p.estado === 'Recibido' && p.requiere_cocina === false && p.origen === 'Mozo' ? html`<button class="btn btn-info rounded-pill" data-act="Listo"><i class="bi bi-bell me-1"></i>Listo (avisar al mozo)</button>` : ''}
     ${!cerrado
       ? p.origen === 'Mozo'
         ? html`<button class="btn btn-success rounded-pill" data-act="En Mesa"><i class="bi bi-check2-circle me-1"></i>En mesa</button>`

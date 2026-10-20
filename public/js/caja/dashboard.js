@@ -1,8 +1,9 @@
+/* global bootstrap */
 import { api } from '../core/api.js';
 import { mountLayout } from '../core/layout.js';
 import { createRealtime } from '../core/realtime.js';
 import { play } from '../core/sound.js';
-import { ESTADO_LABEL, debounce, escapeHtml, estadoBadge, formatTime, html, money, renderPagination, toast } from '../core/ui.js';
+import { ESTADO_LABEL, confirmDialog, debounce, escapeHtml, estadoBadge, formatTime, html, money, renderPagination, showError, toast } from '../core/ui.js';
 import { CERRADOS, cambiarEstado, cambiarPago, clienteNombre, estadoEntrega, estadosPara, origenBadge, pagoSelect, verDetalle } from './shared.js';
 
 await mountLayout('caja', { realtime: true, sound: true });
@@ -15,6 +16,7 @@ app.innerHTML = `
       <p class="text-muted small mb-0">Los pedidos nuevos del kiosco y de los mozos aparecen automáticamente. Escaneá el código del ticket para buscarlo.</p>
     </div>
     <div class="d-flex flex-wrap gap-2">
+      <button class="btn btn-outline-secondary rounded-pill" id="btn-mesas"><i class="bi bi-grid-3x3-gap me-1"></i>Mesas</button>
       <a href="/caja/entregados" class="btn btn-outline-secondary rounded-pill"><i class="bi bi-bag-check me-1"></i>Entregados</a>
       <a href="/llamados" target="_blank" rel="noopener" class="btn btn-outline-info rounded-pill"><i class="bi bi-display me-1"></i>Llamados</a>
       <a href="/caja/pedido" class="btn btn-brand rounded-pill px-4"><i class="bi bi-plus-lg me-1"></i>Nuevo pedido</a>
@@ -58,7 +60,12 @@ const accionesEstado = (p) => {
   if (CERRADOS.includes(p.estado)) return '';
   const siguientes = estadosPara(p).filter((e) => e !== p.estado);
   return html`
-    ${p.estado === 'Recibido' ? html`<button class="btn btn-sm btn-warning rounded-pill" data-cocina="${p.id}" title="Enviar a cocina"><i class="bi bi-fire"></i><span class="d-none d-xl-inline ms-1">Cocina</span></button>` : ''}
+    ${p.estado === 'Recibido' && p.requiere_cocina !== false ? html`<button class="btn btn-sm btn-warning rounded-pill" data-cocina="${p.id}" title="Enviar a cocina"><i class="bi bi-fire"></i><span class="d-none d-xl-inline ms-1">Cocina</span></button>` : ''}
+    ${p.estado === 'Recibido' && p.requiere_cocina === false
+      ? p.origen === 'Mozo'
+        ? html`<button class="btn btn-sm btn-info rounded-pill" data-listo="${p.id}" title="Sin cocina: preparalo y avisá al mozo"><i class="bi bi-bell"></i><span class="d-none d-xl-inline ms-1">Listo</span></button>`
+        : html`<button class="btn btn-sm btn-success rounded-pill" data-entregar="${p.id}" title="Sin cocina: lo entrega la caja"><i class="bi bi-bag-check"></i><span class="d-none d-xl-inline ms-1">Entregar</span></button>`
+      : ''}
     ${p.estado === 'Listo'
       ? p.origen === 'Mozo'
         ? html`<button class="btn btn-sm btn-success rounded-pill" data-entregar="${p.id}" title="El mozo lo llevó a la mesa"><i class="bi bi-check2-circle"></i><span class="d-none d-xl-inline ms-1">En mesa</span></button>`
@@ -135,6 +142,7 @@ tbody.addEventListener('click', async (e) => {
   const ver = e.target.closest('[data-ver]');
   const cocina = e.target.closest('[data-cocina]');
   const entregar = e.target.closest('[data-entregar]');
+  const listo = e.target.closest('[data-listo]');
   const estado = e.target.closest('[data-estado]');
   if (ver) return verDetalle(Number(ver.dataset.ver), upsert);
 
@@ -146,6 +154,7 @@ tbody.addEventListener('click', async (e) => {
     nuevo = pedido && estadoEntrega(pedido);
   }
   if (estado) [pedido, nuevo] = [state.pedidos.get(Number(estado.dataset.id)), estado.dataset.estado];
+  if (listo) [pedido, nuevo] = [state.pedidos.get(Number(listo.dataset.listo)), 'Listo'];
   if (!pedido) return;
   const actualizado = await cambiarEstado(pedido, nuevo);
   if (actualizado) upsert(actualizado);
@@ -183,6 +192,69 @@ app.querySelector('#vista').addEventListener('change', (e) => {
   state.vista = e.target.value;
   state.page = 1;
   load();
+});
+
+// ───────────── Mesas de los mozos (liberar cuando los clientes se fueron) ─────────────
+document.body.insertAdjacentHTML(
+  'beforeend',
+  `<div class="modal fade" id="modal-mesas" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable"><div class="modal-content">
+      <div class="modal-header"><h5 class="modal-title"><i class="bi bi-grid-3x3-gap me-2"></i>Mesas abiertas</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button></div>
+      <div class="modal-body" id="mesas-body"></div>
+    </div></div>
+  </div>`,
+);
+const modalMesasEl = document.getElementById('modal-mesas');
+const modalMesas = new bootstrap.Modal(modalMesasEl);
+
+async function cargarMesas() {
+  const body = modalMesasEl.querySelector('#mesas-body');
+  try {
+    const mesas = await api.get('/caja/mesas');
+    body.innerHTML = mesas.length
+      ? html`<div class="table-responsive"><table class="table align-middle mb-0">
+          <thead><tr><th>Mesa</th><th>Mozo</th><th>Pedidos</th><th>Total</th><th>Falta cobrar</th><th class="text-end"></th></tr></thead>
+          <tbody>${mesas.map(
+            (m) => html`<tr>
+              <td class="fw-semibold">Mesa ${m.mesa}</td>
+              <td>${m.mozo.nombre}</td>
+              <td class="small">${m.pedidos.map((p) => html`<div>${p.codigo} ${estadoBadge(p.estado)}</div>`)}</td>
+              <td>${money(m.total)}</td>
+              <td>${m.pendiente > 0 ? html`<span class="text-danger fw-semibold">${money(m.pendiente)}</span>` : html`<span class="text-success"><i class="bi bi-check2-all"></i> Pago</span>`}</td>
+              <td class="text-end">${m.pendiente > 0
+                ? html`<span class="small text-muted">Cobrar antes de liberar</span>`
+                : html`<button class="btn btn-sm btn-outline-secondary rounded-pill" data-liberar-mozo="${m.mozo.id}" data-liberar-mesa="${m.mesa}"><i class="bi bi-door-open me-1"></i>Liberar</button>`}</td>
+            </tr>`,
+          )}</tbody></table></div>`.toString()
+      : '<div class="empty-state"><i class="bi bi-grid-3x3-gap"></i>No hay mesas abiertas.</div>';
+  } catch (err) {
+    body.innerHTML = `<div class="text-danger">${escapeHtml(err.message)}</div>`;
+  }
+}
+
+app.querySelector('#btn-mesas').addEventListener('click', async () => {
+  await cargarMesas();
+  modalMesas.show();
+});
+
+modalMesasEl.addEventListener('click', async (e) => {
+  const b = e.target.closest('[data-liberar-mesa]');
+  if (!b) return;
+  const mesa = Number(b.dataset.liberarMesa);
+  const ok = await confirmDialog({
+    title: `¿Liberar la mesa ${mesa}?`,
+    text: 'Los pedidos que quedan se marcan como servidos y la mesa queda libre.',
+    confirmText: 'Liberar mesa',
+  });
+  if (!ok) return;
+  try {
+    await api.post('/caja/mesas/liberar', { mozo_id: Number(b.dataset.liberarMozo), mesa });
+    toast(`Mesa ${mesa} liberada`);
+    cargarMesas();
+    load();
+  } catch (err) {
+    showError(err, 'No se pudo liberar la mesa');
+  }
 });
 
 // ───────────── Tiempo real ─────────────

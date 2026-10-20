@@ -2,6 +2,7 @@ import express, { Router } from 'express';
 import { getInfo, getMe, postLogin, postLogout } from '../controllers/auth.controller.js';
 import {
   cajaController,
+  cajaMesasController,
   catalogoController,
   clientesController,
   cocinaController,
@@ -89,6 +90,8 @@ caja.post('/pedidos', cajaController.create);
 caja.put('/pedidos/:id', cajaController.update);
 caja.patch('/pedidos/:id/estado', cajaController.estado);
 caja.patch('/pedidos/:id/pago', cajaController.pago);
+caja.get('/mesas', cajaMesasController.list);
+caja.post('/mesas/liberar', cajaMesasController.liberar);
 caja.get('/clientes', clientesController.buscar);
 caja.get('/clientes/cedula/:cedula', clientesController.porCedula);
 caja.post('/clientes', clientesController.create);
@@ -108,6 +111,7 @@ const mozo = Router();
 mozo.use(requireRole('Mozo'));
 mozo.get('/mesas', mozoController.mesas);
 mozo.post('/mesas/:mesa/cobrar', mozoController.cobrarMesa);
+mozo.post('/mesas/:mesa/liberar', mozoController.liberarMesa);
 mozo.get('/pedidos/:id', mozoController.get);
 mozo.post('/pedidos', mozoController.create);
 mozo.put('/pedidos/:id', mozoController.update);

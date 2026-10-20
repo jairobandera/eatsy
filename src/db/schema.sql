@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS clientes (
 CREATE TABLE IF NOT EXISTS categorias (
   id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   nombre      VARCHAR(255) NOT NULL,
+  va_a_cocina TINYINT(1)   NOT NULL DEFAULT 1,   -- 0 = lo prepara/despacha la caja (bebidas, postres...)
   activo      TINYINT(1)   NOT NULL DEFAULT 1,
   created_at  DATETIME     NOT NULL,
   updated_at  DATETIME     NOT NULL
@@ -129,6 +130,7 @@ CREATE TABLE IF NOT EXISTS detalle_pedido (
   precio_unitario DECIMAL(10,2) NOT NULL,
   descuento       DECIMAL(10,2) NOT NULL DEFAULT 0,
   subtotal        DECIMAL(10,2) NOT NULL,
+  para_cocina     TINYINT(1)    NOT NULL DEFAULT 1, -- se fija al pedir según las categorías del producto
   created_at      DATETIME      NOT NULL,
   CONSTRAINT fk_dp_pedido   FOREIGN KEY (pedido_id)   REFERENCES pedidos(id)   ON DELETE CASCADE,
   CONSTRAINT fk_dp_producto FOREIGN KEY (producto_id) REFERENCES productos(id),
