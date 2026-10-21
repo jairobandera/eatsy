@@ -3,11 +3,12 @@ import { api } from '../core/api.js';
 import { getUser } from '../core/layout.js';
 import { createRealtime } from '../core/realtime.js';
 import { renderBarcodes, imprimirTicket, ticketHtml } from '../core/ticket.js';
-import { debounce, escapeHtml, html, money, renderPagination, showError, toast } from '../core/ui.js';
+import { colorMarca, debounce, escapeHtml, getNegocio, html, money, moduloActivo, renderPagination, showError, toast } from '../core/ui.js';
 import { cart, precioUnidad } from './cart.js';
 import { initTouchKeyboard } from '../core/touch-keyboard.js';
 
 await getUser(); // valida la sesión (redirige al login si venció)
+const cuponesActivos = moduloActivo(await getNegocio(), 'cupones');
 initTouchKeyboard(); // teclado en pantalla para los campos con [data-tk]
 
 const $ = (sel) => document.querySelector(sel);
@@ -216,6 +217,7 @@ let cuponDraft = '';
 const extrasTexto = (it) => it.extras.map((e) => `${e.cantidad}x ${e.nombre}`).join(', ');
 
 function cuponHtml() {
+  if (!cuponesActivos) return ''; // módulo apagado por el superadmin
   const c = cart.cupon;
   if (c) {
     const desc = cart.descuentoCupon;
@@ -326,7 +328,7 @@ async function onCartClick(e) {
     modalPago.show();
   }
   if (e.target.closest('[data-vaciar]')) {
-    const r = await Swal.fire({ title: '¿Vaciar el pedido?', icon: 'question', showCancelButton: true, confirmButtonText: 'Sí, vaciar', cancelButtonText: 'No', confirmButtonColor: '#ff5722' });
+    const r = await Swal.fire({ title: '¿Vaciar el pedido?', icon: 'question', showCancelButton: true, confirmButtonText: 'Sí, vaciar', cancelButtonText: 'No', confirmButtonColor: colorMarca() });
     if (r.isConfirmed) cart.clear();
   }
 }
@@ -433,7 +435,7 @@ function resetIdle() {
       timer: 20_000,
       timerProgressBar: true,
       confirmButtonText: 'Sí, sigo aquí',
-      confirmButtonColor: '#ff5722',
+      confirmButtonColor: colorMarca(),
     });
     if (r.dismiss === Swal.DismissReason.timer) {
       cart.clear();
@@ -466,7 +468,7 @@ $('#btn-logo').addEventListener('click', async () => {
     showCancelButton: true,
     confirmButtonText: 'Cerrar sesión',
     cancelButtonText: 'Cancelar',
-    confirmButtonColor: '#ff5722',
+    confirmButtonColor: colorMarca(),
   });
   if (!pin) return;
   try {

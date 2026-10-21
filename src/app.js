@@ -1,7 +1,8 @@
 import path from 'node:path';
 import express from 'express';
 import config from './config/index.js';
-import { loadUser } from './middlewares/auth.js';
+import { licenciaGuard, loadUser } from './middlewares/auth.js';
+import { logoNegocio } from './controllers/superadmin.controller.js';
 import { errorHandler } from './middlewares/error-handler.js';
 import { securityHeaders } from './middlewares/security.js';
 import apiRoutes from './routes/api.routes.js';
@@ -49,6 +50,11 @@ export function createApp() {
   }
 
   app.use(loadUser);
+  app.use(licenciaGuard);
+
+  // Logo del negocio (lo sube el superadmin; se guarda en la base porque el disco de Render es efímero).
+  app.get('/negocio/logo', logoNegocio);
+
   app.use('/api', apiRoutes);
   app.use(pageRoutes);
 

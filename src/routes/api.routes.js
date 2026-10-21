@@ -11,7 +11,9 @@ import {
   publicoController,
 } from '../controllers/pedidos.controllers.js';
 import { mesaController } from '../controllers/mesa.controller.js';
-import { requireRole } from '../middlewares/auth.js';
+import { requireModulo, requireRole } from '../middlewares/auth.js';
+import { negocioPublico } from '../controllers/superadmin.controller.js';
+import superadminRoutes from './superadmin.routes.js';
 import { qrSeguimiento, seguimientoController } from '../controllers/seguimiento.controller.js';
 import { forbidden } from '../utils/http-error.js';
 import config from '../config/index.js';
@@ -40,10 +42,17 @@ router.use((req, _res, next) => {
 });
 
 // ── Seguimiento del pedido desde el celular del cliente
-router.post('/seguimiento', seguimientoController.iniciar);
-router.get('/seguimiento', seguimientoController.ver);
+const seguimiento = requireModulo('seguimiento');
+router.post('/seguimiento', seguimiento, seguimientoController.iniciar);
+router.get('/seguimiento', seguimiento, seguimientoController.ver);
 router.delete('/seguimiento', seguimientoController.salir);
-router.get('/publico/seguimiento-qr', qrSeguimiento);
+router.get('/publico/seguimiento-qr', seguimiento, qrSeguimiento);
+
+// ── Marca y funciones del negocio (lo lee cualquier pantalla, también sin sesión)
+router.get('/publico/negocio', negocioPublico);
+
+// ── Superadmin (oculto: para cualquier otro responde como ruta inexistente)
+router.use('/superadmin', superadminRoutes);
 
 // ── Celular del cliente en una mesa (QR del mozo + código de la mesa): ver sus pedidos y llamar al mozo
 router.get('/mesa', mesaController.actual);
@@ -77,7 +86,7 @@ catalogo.use(requireRole('Cliente', 'Cajero', 'Mozo'));
 catalogo.get('/categorias', catalogoController.categorias);
 catalogo.get('/productos', catalogoController.productos);
 catalogo.get('/productos/:id', catalogoController.producto);
-catalogo.post('/cupon', catalogoController.cupon);
+catalogo.post('/cupon', requireModulo('cupones'), catalogoController.cupon);
 router.use('/catalogo', catalogo);
 
 // ── Kiosco
@@ -108,6 +117,7 @@ cocina.use(requireRole('Cocina'));
 cocina.get('/pedidos', cocinaController.list);
 cocina.get('/pedidos/:id', cocinaController.get);
 cocina.patch('/pedidos/:id/listo', cocinaController.listo);
+cocina.patch('/pedidos/:id/entregar', cocinaController.entregar);
 router.use('/cocina', cocina);
 
 // ── Mozo

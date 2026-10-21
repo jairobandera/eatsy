@@ -93,6 +93,27 @@ Tené en cuenta:
 
 ---
 
+## 📦 Paquetes y superadmin
+
+Cada negocio tiene **su propia instalación** (su servicio en Render y su base). En cada una hay un **superadmin oculto** para el proveedor de la app:
+
+- Se define con las variables `SUPERADMIN_USER` y `SUPERADMIN_PASSWORD` (en producción, contraseña de 12 caracteres o más). No se guarda en la base, no aparece en *Admin → Usuarios* y, sin esas variables, no existe.
+- Entra por el login normal y va a **`/superadmin`**. Para cualquier otro usuario esa pantalla y su API responden *404*. También puede entrar al panel del negocio para dar soporte.
+
+Desde `/superadmin` se configura (todo se aplica al instante):
+
+| Sección | Qué hace |
+|---|---|
+| **Paquete** | **Full**: kiosco, caja, cocina, mozos con mesas, llamados y administración. **Tótem**: kiosco, llamados y administración, con o sin usuario de **Cocina**. En Tótem el pedido del kiosco va directo a la cocina (o queda listo si es solo bebidas/postres); la cocina lo marca Listo, aparece en /llamados y, al retirarlo, la cocina toca **Entregado** y el pago queda completado. Sin cocina, el administrador atiende la pantalla de cocina. Los usuarios de roles que el paquete no incluye no pueden entrar (sus sesiones se cortan) ni crearse. |
+| **Licencia** | Fecha de "pago hasta" (7 días antes se le avisa al administrador; al día siguiente del vencimiento se bloquea) y botón para **suspender**. Bloqueada, la app muestra "Servicio suspendido" a todos menos al superadmin. |
+| **Negocio** | Nombre, color principal y logo (máx. 300 KB, se guarda en la base). Reemplazan a "Eatsy" en el kiosco, llamados, tickets, login y paneles. |
+| **Límites** | Máximo de usuarios activos por tipo (ej. 2 kioscos). Vacío = sin límite. |
+| **Módulos** | Prender o apagar cupones, puntos de clientes, seguimiento por QR y estadísticas. |
+
+Sin configuración guardada, la instalación funciona como siempre (Full, sin vencimiento, marca Eatsy).
+
+---
+
 ## 🍔 Extras, cupones y teclado táctil
 
 - **Extras de ingredientes**: en *Admin → Ingredientes* cada ingrediente puede tener un **precio como extra** (vacío o 0 = no se ofrece como extra: el cliente solo lo puede quitar). En *Admin → Productos*, cada ingrediente del producto tiene el interruptor **Extra** para decidir si en ESE producto se puede pedir más cantidad (ej. carne extra en la hamburguesa sí, en la empanada no; las empanadas vienen sin extras). En el kiosco y en la caja, al elegir un producto se puede pedir hasta **3 unidades extra** de esos ingredientes (ej. 2 carnes más en la hamburguesa). Se cobran aparte de la promoción y se ven en caja, cocina, tickets y seguimiento.

@@ -10,7 +10,7 @@ import { WebSocketServer } from './server.js';
  *  - Mozo: solo los pedidos que tomó él y los llamados de sus mesas.
  *  - Celular en una mesa (entró con el QR del mozo y el código de la mesa): solo los pedidos de esa mesa.
  */
-const STAFF = new Set(['Administrador', 'Cajero', 'Cocina']);
+const STAFF = new Set(['Administrador', 'Cajero', 'Cocina', 'Superadmin']);
 
 let wss = null;
 

@@ -3,7 +3,7 @@ body.seguimiento { background: #f6f3f1; min-height: 100dvh; padding-bottom: env(
 
 .seg-header {
   display: flex; align-items: center; gap: 0.9rem; padding: calc(1rem + env(safe-area-inset-top)) 1.25rem 2.75rem;
-  background: linear-gradient(120deg, #ff5722, #ff8a50); color: #fff;
+  background: linear-gradient(120deg, var(--brand), var(--brand-light)); color: #fff;
 }
 .seg-header h1 { font-size: 1.5rem; font-weight: 800; margin: 0; }
 .seg-header p { margin: 0; opacity: 0.85; font-size: 0.9rem; }
@@ -42,7 +42,7 @@ body.seguimiento { background: #f6f3f1; min-height: 100dvh; padding-bottom: env(
 .pasos li.hecho span { background: #d3f9d8; }
 .pasos li.hecho::after { background: #b2f2bb !important; }
 .pasos li.actual { color: var(--brand-dark); }
-.pasos li.actual span { background: var(--brand); color: #fff; box-shadow: 0 0 0 5px rgba(255, 87, 34, 0.2); }
+.pasos li.actual span { background: var(--brand); color: #fff; box-shadow: 0 0 0 5px rgba(var(--brand-rgb), 0.2); }
 .pasos.cancelado li { opacity: 0.4; }
 
 #items li { display: flex; gap: 0.6rem; padding: 0.4rem 0; border-bottom: 1px dashed #e9ecef; }

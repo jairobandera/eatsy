@@ -11,7 +11,8 @@ export function errorHandler(err, req, res, _next) {
     return res.status(err.status).json({ message: err.message, ...(err.details || {}) });
   }
   if (err instanceof multer.MulterError) {
-    const message = err.code === 'LIMIT_FILE_SIZE' ? 'La imagen supera el tamaño máximo (5 MB).' : `Error al subir el archivo: ${err.message}`;
+    const maximo = err.field === 'logo' ? '300 KB' : '5 MB';
+    const message = err.code === 'LIMIT_FILE_SIZE' ? `La imagen supera el tamaño máximo (${maximo}).` : `Error al subir el archivo: ${err.message}`;
     return res.status(422).json({ message });
   }
   if (err.type === 'entity.parse.failed') {

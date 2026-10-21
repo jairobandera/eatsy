@@ -15,6 +15,13 @@ CREATE TABLE IF NOT EXISTS usuarios (
   UNIQUE KEY uq_usuarios_qr (qr_token)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Configuración de la instalación (la maneja el superadmin): paquete, licencia, marca, límites y módulos.
+CREATE TABLE IF NOT EXISTS configuracion (
+  clave       VARCHAR(50) PRIMARY KEY,
+  valor       MEDIUMTEXT  NOT NULL,              -- JSON
+  updated_at  DATETIME    NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Mesas abiertas por un mozo (aunque todavía no tengan pedidos). Cada apertura tiene un código
 -- de 4 dígitos que el mozo le da al cliente para seguir la mesa desde el celular; al liberarla
 -- (cerrada_at) el código y el acceso de esos celulares dejan de valer.

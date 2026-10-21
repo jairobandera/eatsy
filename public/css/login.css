@@ -1,6 +1,6 @@
 body {
   background:
-    radial-gradient(circle at 15% 20%, rgba(255, 87, 34, 0.18), transparent 40%),
+    radial-gradient(circle at 15% 20%, rgba(var(--brand-rgb), 0.18), transparent 40%),
     radial-gradient(circle at 85% 80%, rgba(255, 152, 0, 0.18), transparent 40%),
     var(--bg-app);
 }
