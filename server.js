@@ -1,7 +1,7 @@
 import http from 'node:http';
 import { createApp } from './src/app.js';
 import config from './src/config/index.js';
-import { closeDatabase, initDatabase, sql } from './src/db/connection.js';
+import { closeDatabase, iniciarLatido, initDatabase, sql } from './src/db/connection.js';
 import { seedInicial } from './src/db/seed.js';
 import { readMesaAcceso, readSeguimiento, readSession } from './src/middlewares/auth.js';
 import { cargarConfig } from './src/services/config.service.js';
@@ -28,6 +28,9 @@ async function main() {
   // Paquete, licencia, marca, límites y módulos de esta instalación (los define el superadmin).
   const cfg = await cargarConfig();
   console.log(`• Paquete ${cfg.paquete.tipo.toUpperCase()} · ${cfg.negocio.nombre}${config.superadmin ? ' · superadmin habilitado' : ''}`);
+
+  // Mantiene activa la base (los MySQL gratuitos en la nube se apagan si no tienen actividad).
+  iniciarLatido();
 
   const app = createApp();
   const server = http.createServer(app);

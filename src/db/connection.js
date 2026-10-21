@@ -108,7 +108,24 @@ export async function dropAllTables() {
   }
 }
 
+let latido = null;
+
+/**
+ * Consulta liviana periódica a MySQL mientras el servidor está prendido. Los MySQL gratuitos
+ * en la nube (ej. Aiven) apagan las bases que pasan un tiempo sin actividad; con esto la base
+ * siempre ve conexiones. Complementa al cron que pega a /api/salud.
+ */
+export function iniciarLatido({ cadaMs = config.db.keepaliveMs } = {}) {
+  clearInterval(latido);
+  if (!cadaMs) return;
+  latido = setInterval(() => {
+    pool.query('SELECT 1').catch((err) => console.warn(`[db] el latido a MySQL falló: ${err.code || err.message}`));
+  }, cadaMs);
+  latido.unref?.(); // no impide que el proceso se cierre
+}
+
 export async function closeDatabase() {
+  clearInterval(latido);
   await pool.end();
 }
 

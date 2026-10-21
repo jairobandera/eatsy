@@ -59,6 +59,8 @@ function dbConfig() {
   return {
     ...base,
     connectionLimit: Number(env.DB_POOL) || 10,
+    // Consulta a MySQL cada N minutos para que la base en la nube no se apague por inactividad (0 = no).
+    keepaliveMs: (env.DB_KEEPALIVE_MINUTOS === undefined || env.DB_KEEPALIVE_MINUTOS === '' ? 60 : Math.max(0, Number(env.DB_KEEPALIVE_MINUTOS) || 0)) * 60_000,
     // La mayoría de los MySQL en la nube exigen conexión cifrada.
     ssl: ssl ? { rejectUnauthorized: !bool(env.DB_SSL_ALLOW_SELF_SIGNED), minVersion: 'TLSv1.2' } : undefined,
   };
