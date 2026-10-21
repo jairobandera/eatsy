@@ -52,11 +52,25 @@ const urgencia = (min) => (min >= 20 ? 'late' : min >= 10 ? 'warn' : 'ok');
  * En Tótem no hay caja: al entregar se muestra todo el pedido.
  */
 const deCocina = (p) => (esListo(p) ? p.detalles : p.detalles.filter((d) => d.para_cocina !== false));
-const lugarOtros = TOTEM ? 'para entregar en el mostrador' : 'a cargo de la caja';
+const tituloOtros = TOTEM ? 'Para entregar en el mostrador' : 'Lo prepara la caja';
+
+/** Lo que no se cocina (bebidas, postres...), por nombre, para tenerlo listo al entregar. */
+const otrosHtml = (otros) =>
+  otros.length
+    ? html`<div class="kitchen-otros mx-3 mb-2">
+        <div class="titulo"><i class="bi bi-cup-straw me-1"></i>${tituloOtros}:</div>
+        <ul class="list-unstyled mb-0">${otros.map(
+          (d) => html`<li><b>${d.cantidad}x</b> ${d.producto.nombre}
+            ${d.extras?.length ? html`<span class="extra"> · extra ${d.extras.map((e) => `${e.cantidad}x ${e.nombre}`).join(', ')}</span>` : ''}
+            ${d.quitados.length ? html`<span class="sin"> · sin ${d.quitados.map((q) => q.nombre).join(', ')}</span>` : ''}</li>`,
+        )}</ul>
+      </div>`
+    : '';
 
 const cardHtml = (p) => {
   const min = minutos(p);
-  const otros = p.detalles.length - deCocina(p).length;
+  const enCocina = new Set(deCocina(p));
+  const otros = p.detalles.filter((d) => !enCocina.has(d));
   const listo = esListo(p);
   return html`<div class="col-sm-6 col-lg-4 col-xxl-3" data-id="${p.id}">
     <article class="kitchen-card card-app h-100 d-flex flex-column ${listo ? 'kitchen-listo' : ''}" data-urgencia="${listo ? 'ok' : urgencia(min)}">
@@ -71,7 +85,7 @@ const cardHtml = (p) => {
             ${d.quitados.length ? html`<div class="sin"><i class="bi bi-x-circle me-1"></i>SIN: ${d.quitados.map((q) => q.nombre).join(', ')}</div>` : ''}</div></li>`,
         )}
       </ul>
-      ${otros ? html`<div class="px-3 pb-2 small text-muted"><i class="bi bi-cup-straw me-1"></i>+${otros} ${otros === 1 ? 'producto' : 'productos'} ${lugarOtros}</div>` : ''}
+      ${otrosHtml(otros)}
       <footer class="p-3 pt-0">${listo
         ? html`<button class="btn btn-outline-success w-100 btn-lg rounded-pill" data-entregar="${p.id}"><i class="bi bi-bag-check me-1"></i>Entregado</button>`
         : html`<button class="btn btn-success w-100 btn-lg rounded-pill" data-listo="${p.id}"><i class="bi bi-check2-circle me-1"></i>Listo</button>`}</footer>

@@ -18,3 +18,8 @@
 
 /* Tótem: pedidos listos para retirar */
 .kitchen-listo { border-top-color: #198754; opacity: 0.95; }
+/* Productos que no se cocinan (bebidas, postres): se entregan en el mostrador / los prepara la caja */
+.kitchen-otros { border: 1px dashed #ced4da; border-radius: 0.6rem; padding: 0.45rem 0.7rem; background: #f8f9fa; font-size: 0.9rem; color: #495057; }
+.kitchen-otros .titulo { font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.02em; color: #6c757d; margin-bottom: 0.15rem; }
+.kitchen-otros .extra { color: #087f5b; font-weight: 600; }
+.kitchen-otros .sin { color: #c92a2a; font-weight: 600; }
