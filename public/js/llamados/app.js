@@ -1,5 +1,5 @@
 import { api } from '../core/api.js';
-import { createRealtime } from '../core/realtime.js';
+import { createRealtime, recargarSolaPorConfig } from '../core/realtime.js';
 import { play } from '../core/sound.js';
 import { getNegocio, html, moduloActivo } from '../core/ui.js';
 
@@ -104,6 +104,8 @@ rt.on('pedido:actualizado', (p) => {
   aplicar(p);
   render();
 });
+// Monitor público: nadie trabaja en esta pantalla, así que los cambios de configuración se aplican solos.
+recargarSolaPorConfig();
 rt.onReconnect(load);
 
 // Reloj

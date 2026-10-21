@@ -6,46 +6,52 @@
  *   rt.onReconnect(() => recargarDatos());   // por si se perdieron eventos
  */
 // ───────────── Cambios de configuración (superadmin) ─────────────
-// Cuando el superadmin guarda cambios (marca, paquete, módulos...), todas las pantallas se recargan
-// solas para aplicarlos. Si la pantalla tiene trabajo sin guardar (ej. un pedido a medio cargar),
-// en vez de recargar muestra un aviso con un botón para hacerlo cuando el usuario termine.
-let trabajoEnCurso = () => false;
-let recargaDesactivada = false;
-let recargaEnCurso = false;
+// Cuando el superadmin guarda cambios (marca, paquete, módulos...), las pantallas NO se recargan
+// solas (alguien puede estar cobrando o cargando un pedido): aparece un cartel con "Actualizar" y
+// "Más tarde". Con "Más tarde" los cambios se aplican la próxima vez que se recargue (F5) o se
+// cambie de pantalla. Solo las pantallas sin nadie operándolas (el monitor de llamados) se
+// recargan solas.
+let modoConfig = 'preguntar'; // 'preguntar' | 'automatico' | 'nunca'
 
-/** La pantalla indica si tiene algo sin guardar (para no recargarla de golpe). */
-export const marcarTrabajoEnCurso = (fn) => (trabajoEnCurso = fn);
-/** Pantallas que no se recargan (la del superadmin, que es la que guarda). */
-export const desactivarRecargaPorConfig = () => (recargaDesactivada = true);
+/** El monitor de llamados se recarga solo (nadie trabaja en esa pantalla). */
+export const recargarSolaPorConfig = () => (modoConfig = 'automatico');
+/** Pantallas que ni avisan (la del superadmin, que es la que guarda). */
+export const desactivarRecargaPorConfig = () => (modoConfig = 'nunca');
 
-function avisoConfig(texto, { boton = false } = {}) {
+const BOTON = 'border:0;border-radius:2rem;padding:.35rem .9rem;font-weight:600;cursor:pointer;white-space:nowrap';
+
+function avisoConfig() {
   document.getElementById('aviso-config')?.remove();
   const el = document.createElement('div');
   el.id = 'aviso-config';
-  el.setAttribute('role', 'status');
+  el.setAttribute('role', 'alertdialog');
+  el.setAttribute('aria-label', 'Hay una actualización de la configuración');
   el.style.cssText =
-    'position:fixed;left:50%;bottom:1rem;transform:translateX(-50%);z-index:3000;background:#212529;color:#fff;padding:.7rem 1rem;border-radius:2rem;box-shadow:0 .5rem 1.25rem rgba(0,0,0,.25);display:flex;align-items:center;gap:.75rem;font:500 .95rem/1.3 system-ui,sans-serif;max-width:calc(100% - 2rem)';
-  el.textContent = texto;
-  if (boton) {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.textContent = 'Recargar';
-    b.style.cssText = 'border:0;border-radius:2rem;padding:.35rem .9rem;font-weight:600;background:var(--brand,#ff5722);color:#fff;cursor:pointer';
-    b.onclick = () => location.reload();
-    el.append(b);
-  }
+    'position:fixed;left:50%;bottom:1rem;transform:translateX(-50%);z-index:3000;background:#212529;color:#fff;padding:.75rem 1rem;border-radius:1.25rem;box-shadow:0 .5rem 1.25rem rgba(0,0,0,.25);display:flex;flex-wrap:wrap;align-items:center;gap:.6rem .75rem;font:500 .95rem/1.3 system-ui,sans-serif;max-width:calc(100% - 2rem)';
+  const texto = document.createElement('span');
+  texto.textContent = 'Hay una actualización de la configuración del sistema.';
+  const actualizar = document.createElement('button');
+  actualizar.type = 'button';
+  actualizar.textContent = 'Actualizar';
+  actualizar.style.cssText = `${BOTON};background:var(--brand,#ff5722);color:#fff`;
+  actualizar.onclick = () => location.reload();
+  const despues = document.createElement('button');
+  despues.type = 'button';
+  despues.textContent = 'Más tarde';
+  despues.title = 'Se aplica la próxima vez que recargues la página (F5)';
+  despues.style.cssText = `${BOTON};background:transparent;color:#ced4da;border:1px solid #6c757d`;
+  despues.onclick = () => el.remove();
+  el.append(texto, actualizar, despues);
   document.body.append(el);
 }
 
 function alCambiarConfig() {
-  if (recargaDesactivada || recargaEnCurso) return;
-  if (trabajoEnCurso()) {
-    avisoConfig('Se actualizó la configuración del sistema. Recargá cuando termines.', { boton: true });
+  if (modoConfig === 'nunca') return;
+  if (modoConfig === 'automatico') {
+    setTimeout(() => location.reload(), 1500);
     return;
   }
-  recargaEnCurso = true;
-  avisoConfig('Se actualizó la configuración del sistema. Recargando…');
-  setTimeout(() => location.reload(), 2000);
+  avisoConfig();
 }
 
 export function createRealtime({ path = '/ws', onStatus } = {}) {

@@ -1,7 +1,6 @@
 /* global bootstrap */
 import { api } from '../core/api.js';
 import { mountLayout } from '../core/layout.js';
-import { marcarTrabajoEnCurso } from '../core/realtime.js';
 import { confirmDialog, debounce, escapeHtml, html, renderPagination, showError, toast, withLoading } from '../core/ui.js';
 
 /**
@@ -84,8 +83,6 @@ export async function createCrudPage(cfg) {
   const tbody = app.querySelector('#tbody');
   const modalEl = app.querySelector('#crud-modal');
   const modal = new bootstrap.Modal(modalEl);
-  // Con el formulario abierto, un cambio de configuración no recarga la página (avisa).
-  marcarTrabajoEnCurso(() => modalEl.classList.contains('show'));
   const form = app.querySelector('#crud-form');
   let editing = null;
 
