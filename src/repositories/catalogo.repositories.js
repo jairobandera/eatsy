@@ -21,6 +21,18 @@ export const usuariosRepo = {
     return toBool(await sql.get('SELECT * FROM usuarios WHERE nombre = ? LIMIT 1', [String(nombre).trim()]), 'activo');
   },
 
+  /** Usuarios activos de un rol (para los límites del paquete). */
+  async countActivosPorRol(rol, { excludeId = 0 } = {}) {
+    const row = await sql.get('SELECT COUNT(*) AS c FROM usuarios WHERE rol = ? AND activo = 1 AND id <> ?', [rol, excludeId]);
+    return Number(row.c);
+  },
+
+  /** { Administrador: 2, Cajero: 1, ... } solo usuarios activos. */
+  async resumenPorRol() {
+    const rows = await sql.all('SELECT rol, COUNT(*) AS c FROM usuarios WHERE activo = 1 GROUP BY rol');
+    return Object.fromEntries(rows.map((r) => [r.rol, Number(r.c)]));
+  },
+
   async countActiveAdmins({ excludeId = 0 } = {}) {
     const row = await sql.get(
       `SELECT COUNT(*) AS c FROM usuarios WHERE rol = 'Administrador' AND activo = 1 AND id <> ?`,

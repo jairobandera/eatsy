@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import config from '../config/index.js';
+import { obtenerConfig, paletaMarca, versionConfig } from '../services/config.service.js';
 
 /**
  * "Cache busting" de JS y CSS: cada página pide sus archivos con ?v=<hash del contenido>.
@@ -45,12 +46,35 @@ function versionar(html, map) {
   return conVersion.includes('<script') ? conVersion.replace('<script', `${importMap}\n  <script`) : conVersion;
 }
 
+const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+const escapar = (v) => String(v).replace(/[&<>"']/g, (c) => ESC[c]);
+
+/**
+ * Marca del negocio (la define el superadmin): nombre en lugar de "Eatsy", su logo y su color.
+ * El nombre también queda en <meta name="negocio"> para los títulos que arma el JavaScript.
+ */
+function conMarca(html) {
+  const { negocio } = obtenerConfig();
+  const p = paletaMarca(negocio.color);
+  const rgb = [1, 3, 5].map((i) => parseInt(p.brand.slice(i, i + 2), 16)).join(', ');
+  const estilo = `<style>:root{--brand:${p.brand};--brand-dark:${p.dark};--brand-soft:${p.soft};--brand-light:${p.light};--brand-rgb:${rgb};--bs-link-color:${p.dark}}</style>`;
+  const meta = `<meta name="negocio" content="${escapar(negocio.nombre)}">`;
+  return html
+    .replace(/Eatsy/g, escapar(negocio.nombre))
+    .replaceAll('/img/logo.png', `/negocio/logo?v=${versionConfig()}`)
+    .replace(/<meta name="theme-color" content="[^"]*">/, `<meta name="theme-color" content="${p.brand}">`)
+    .replace('</head>', `  ${meta}\n  ${estilo}\n</head>`);
+}
+
 const cache = new Map();
 
-/** HTML de una página de public/ con JS y CSS versionados (en producción se calcula una vez). */
+/** Al cambiar la marca o el paquete, las páginas se vuelven a armar. */
+export const invalidarPaginas = () => cache.clear();
+
+/** HTML de una página de public/ con JS y CSS versionados y la marca del negocio (en producción se calcula una vez). */
 export function paginaVersionada(file) {
   if (config.isProduction && cache.has(file)) return cache.get(file);
-  const html = versionar(fs.readFileSync(path.join(config.paths.public, file), 'utf8'), versiones());
+  const html = conMarca(versionar(fs.readFileSync(path.join(config.paths.public, file), 'utf8'), versiones()));
   if (config.isProduction) cache.set(file, html);
   return html;
 }

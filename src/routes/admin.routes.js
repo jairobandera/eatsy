@@ -8,7 +8,7 @@ import {
   reglasPuntosController,
   usuariosController,
 } from '../controllers/admin.controllers.js';
-import { requireRole } from '../middlewares/auth.js';
+import { requireModulo, requireRole } from '../middlewares/auth.js';
 import { qrMozo } from '../services/mesas.service.js';
 import { parseId } from '../utils/validator.js';
 import { uploadImagenProducto } from '../middlewares/upload.js';
@@ -34,11 +34,12 @@ router.get('/usuarios/:id/qr', async (req, res) => res.json(await qrMozo(parseId
 crud(router, '/productos', productosController, { upload: uploadImagenProducto });
 crud(router, '/promociones', promocionesController);
 
-router.get('/reglas-puntos', reglasPuntosController.list);
-router.post('/reglas-puntos', reglasPuntosController.create);
-router.put('/reglas-puntos/:id', reglasPuntosController.update);
-router.delete('/reglas-puntos/:id', reglasPuntosController.remove);
+const puntos = requireModulo('puntos');
+router.get('/reglas-puntos', puntos, reglasPuntosController.list);
+router.post('/reglas-puntos', puntos, reglasPuntosController.create);
+router.put('/reglas-puntos/:id', puntos, reglasPuntosController.update);
+router.delete('/reglas-puntos/:id', puntos, reglasPuntosController.remove);
 
-router.get('/estadisticas', getEstadisticas);
+router.get('/estadisticas', requireModulo('estadisticas'), getEstadisticas);
 
 export default router;

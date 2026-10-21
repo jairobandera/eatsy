@@ -53,6 +53,23 @@ export function todayYmd() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+// ───────────── Marca del negocio ─────────────
+// El servidor inyecta en cada página el nombre (<meta name="negocio">) y el color (--brand).
+export const nombreNegocio = () => document.querySelector('meta[name="negocio"]')?.content || 'Eatsy';
+export const colorMarca = () => getComputedStyle(document.documentElement).getPropertyValue('--brand').trim() || '#ff5722';
+
+let negocioCache = null;
+/** Marca, paquete, módulos habilitados y estado de la licencia (GET /api/publico/negocio). */
+export function getNegocio() {
+  negocioCache ??= fetch('/api/publico/negocio', { credentials: 'same-origin' })
+    .then((r) => (r.ok ? r.json() : null))
+    .catch(() => null)
+    .then((n) => n || { nombre: nombreNegocio(), paquete: 'full', roles: [], modulos: {} });
+  return negocioCache;
+}
+/** ¿El módulo está habilitado? (si no se pudo leer la configuración, se asume que sí). */
+export const moduloActivo = (negocio, modulo) => negocio?.modulos?.[modulo] !== false;
+
 export const ESTADO_CLASES = {
   Cancelado: 'text-bg-danger',
   Recibido: 'text-bg-secondary',

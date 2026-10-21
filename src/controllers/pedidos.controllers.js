@@ -23,6 +23,8 @@ import {
   registrarCobro,
 } from '../services/pedidos.service.js';
 import { conflict } from '../utils/http-error.js';
+import { esTotem } from '../services/config.service.js';
+import { despacharPedidoTotem, entregarPedidoTotem } from '../services/pedidos.service.js';
 import { pagination, paginated, parseId, validate } from '../utils/validator.js';
 import { optionalNumber } from './helpers.js';
 
@@ -145,6 +147,8 @@ export const kioscoController = {
       codigoCupon: data.codigo_cupon,
       ip: req.ip,
     });
+    // Tótem: no hay caja que lo mande a la cocina.
+    if (esTotem()) await despacharPedidoTotem(pedido);
     res.status(201).json({
       id: pedido.id,
       codigo: pedido.codigo,
@@ -162,6 +166,8 @@ export const cocinaController = {
   list: async (req, res) => res.json(await listarPedidosCocina({ order: req.query.order === 'desc' ? 'desc' : 'asc' })),
   get: async (req, res) => res.json(await obtenerPedido(parseId(req.params.id))),
   listo: async (req, res) => res.json(await cambiarEstado(parseId(req.params.id), 'Listo')),
+  /** Solo Tótem: el cliente retiró el pedido. */
+  entregar: async (req, res) => res.json(await entregarPedidoTotem(parseId(req.params.id))),
 };
 
 // ───────────── Mozo (pedidos por mesa) ─────────────

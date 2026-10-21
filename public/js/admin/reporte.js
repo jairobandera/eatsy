@@ -1,5 +1,5 @@
 import { api } from '../core/api.js';
-import { escapeHtml, formatDate, html, money, todayYmd } from '../core/ui.js';
+import { escapeHtml, formatDate, html, money, nombreNegocio, todayYmd } from '../core/ui.js';
 import { renderCharts } from './charts.js';
 
 const params = new URLSearchParams(location.search);
@@ -22,7 +22,7 @@ try {
     <header>
       <div><h1 class="h4 fw-bold mb-0">Reporte de estadísticas</h1>
         <div class="text-muted">Período: ${formatDate(start)} al ${formatDate(end)}</div></div>
-      <img src="/img/logo.png" alt="Eatsy">
+      <img src="/negocio/logo" alt="${nombreNegocio()}">
     </header>
 
     <section class="kpis">
@@ -52,7 +52,7 @@ try {
       ${tabla(['Método', 'Pagos', 'Total'], r.por_metodo.map((m) => [m.tipo, m.cantidad, money(m.total)]))}
     </section>
 
-    <footer>Generado el ${new Date().toLocaleString('es-UY')} · Eatsy AutoPedido 2.0</footer>`;
+    <footer>Generado el ${new Date().toLocaleString('es-UY')} · ${nombreNegocio()}</footer>`;
 
   renderCharts(data, { animation: false });
   document.getElementById('btn-print').addEventListener('click', () => window.print());

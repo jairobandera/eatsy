@@ -25,5 +25,18 @@ export const uploadImagenProducto = multer({
   },
 }).single('imagen');
 
+/**
+ * Logo del negocio (campo `logo`, máx. 300 KB). Queda en memoria: se guarda en la base porque el
+ * disco de Render se borra en cada deploy.
+ */
+export const uploadLogo = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 300 * 1024, files: 1 },
+  fileFilter: (_req, file, cb) => {
+    if (!EXTENSIONS[file.mimetype]) return cb(unprocessable('El logo debe ser JPG, PNG, GIF o WEBP.'));
+    cb(null, true);
+  },
+}).single('logo');
+
 /** Ruta pública de un archivo subido. */
 export const publicUploadPath = (file) => (file ? `/uploads/productos/${file.filename}` : null);

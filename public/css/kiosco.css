@@ -2,7 +2,7 @@
 body.kiosco { background: #f6f3f1; user-select: none; -webkit-tap-highlight-color: transparent; padding-bottom: 5rem; }
 .kiosco input, .kiosco textarea { user-select: text; }
 
-.kiosco-hero { background: linear-gradient(120deg, #ff5722, #ff8a50); color: #fff; }
+.kiosco-hero { background: linear-gradient(120deg, var(--brand), var(--brand-light)); color: #fff; }
 .kiosco-hero h1 { font-size: clamp(1.5rem, 3vw, 2.4rem); }
 .kiosco-logo { border: 0; background: #fff; border-radius: 1rem; padding: 0.4rem 0.7rem; box-shadow: var(--shadow-sm); }
 .kiosco-logo img { height: clamp(48px, 7vw, 76px); }

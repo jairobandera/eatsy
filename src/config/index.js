@@ -18,6 +18,9 @@ const bool = (v) => ['1', 'true', 'si', 'sí', 'yes'].includes(String(v ?? '').t
 if (isProduction && (!env.SESSION_SECRET || env.SESSION_SECRET.length < 32)) {
   throw new Error('En producción SESSION_SECRET debe tener al menos 32 caracteres.');
 }
+if (isProduction && env.SUPERADMIN_PASSWORD && env.SUPERADMIN_PASSWORD.length < 12) {
+  throw new Error('En producción SUPERADMIN_PASSWORD debe tener al menos 12 caracteres.');
+}
 
 /**
  * Modo de la app:
@@ -82,6 +85,8 @@ const config = Object.freeze({
   // En Render se toma sola de RENDER_EXTERNAL_URL.
   publicUrl: env.PUBLIC_URL || env.RENDER_EXTERNAL_URL || '',
   kioscoPin: env.KIOSCO_PIN || '4500',
+  // Superadmin oculto (solo el proveedor de la app): no se guarda en la base. Sin estas variables no existe.
+  superadmin: env.SUPERADMIN_USER && env.SUPERADMIN_PASSWORD ? { user: env.SUPERADMIN_USER.trim(), password: env.SUPERADMIN_PASSWORD } : null,
   productPlaceholder: env.PRODUCT_PLACEHOLDER || '/img/placeholder-producto.svg',
   paths: {
     public: path.join(ROOT_DIR, 'public'),

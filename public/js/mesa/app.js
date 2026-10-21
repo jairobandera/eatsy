@@ -1,6 +1,6 @@
 import { api } from '../core/api.js';
 import { createRealtime } from '../core/realtime.js';
-import { html, money, withLoading } from '../core/ui.js';
+import { html, money, nombreNegocio, withLoading } from '../core/ui.js';
 
 /**
  * Celular del cliente en una mesa. Llega escaneando el QR del mozo (/mesa/<token>):
@@ -42,7 +42,7 @@ function pedirMesa({ aviso = '' } = {}) {
   rt?.close();
   rt = null;
   clearInterval(pollTimer);
-  document.title = 'Mi mesa · Eatsy';
+  document.title = `Mi mesa · ${nombreNegocio()}`;
   $('titulo').textContent = 'Mi mesa';
   mostrar('vista-mesa');
   $('form-mesa').reset();
@@ -85,7 +85,7 @@ $('form-mesa').addEventListener('submit', async (e) => {
 function abrirMesa(data) {
   mesa = data.mesa;
   estados = new Map(data.pedidos.map((p) => [p.id, p.estado]));
-  document.title = `Mesa ${mesa} · Eatsy`;
+  document.title = `Mesa ${mesa} · ${nombreNegocio()}`;
   $('titulo').textContent = `Mesa ${mesa}`;
   $('mozo-nombre').textContent = data.mozo.nombre;
   mostrar('vista-pedidos');
@@ -128,7 +128,7 @@ function renderPedidos(data) {
 function avisarListo() {
   navigator.vibrate?.([300, 150, 300]);
   document.title = '🔔 ¡Tu pedido ya sale!';
-  setTimeout(() => (document.title = `Mesa ${mesa} · Eatsy`), 8000);
+  setTimeout(() => (document.title = `Mesa ${mesa} · ${nombreNegocio()}`), 8000);
 }
 
 /** La mesa se liberó (los clientes se fueron): este celular ya no tiene acceso. */

@@ -4,6 +4,7 @@ import config from './src/config/index.js';
 import { closeDatabase, initDatabase, sql } from './src/db/connection.js';
 import { seedInicial } from './src/db/seed.js';
 import { readMesaAcceso, readSeguimiento, readSession } from './src/middlewares/auth.js';
+import { cargarConfig } from './src/services/config.service.js';
 import { publicBaseUrl } from './src/utils/network.js';
 import { closeRealtime, initRealtime } from './src/websocket/realtime.js';
 
@@ -23,6 +24,10 @@ async function main() {
     console.log(`• Base vacía: inicializando en modo ${config.appMode.toUpperCase()}...`);
     await seedInicial();
   }
+
+  // Paquete, licencia, marca, límites y módulos de esta instalación (los define el superadmin).
+  const cfg = await cargarConfig();
+  console.log(`• Paquete ${cfg.paquete.tipo.toUpperCase()} · ${cfg.negocio.nombre}${config.superadmin ? ' · superadmin habilitado' : ''}`);
 
   const app = createApp();
   const server = http.createServer(app);

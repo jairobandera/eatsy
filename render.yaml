@@ -32,3 +32,8 @@ services:
         sync: false
       - key: KIOSCO_PIN
         sync: false
+      # Superadmin oculto (solo vos): paquete, licencia, marca, límites y módulos en /superadmin
+      - key: SUPERADMIN_USER
+        sync: false
+      - key: SUPERADMIN_PASSWORD
+        sync: false

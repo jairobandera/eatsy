@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import { transaction } from '../db/connection.js';
 import { clientesRepo, reglasPuntosRepo } from '../repositories/clientes.repository.js';
 import { mesasRepo } from '../repositories/mesas.repository.js';
+import { esTotem, moduloActivo } from './config.service.js';
 import { pedidosRepo } from '../repositories/pedidos.repository.js';
 import { productosRepo } from '../repositories/productos.repository.js';
 import { badRequest, conflict, forbidden, notFound, unprocessable } from '../utils/http-error.js';
@@ -143,6 +144,7 @@ async function validarCliente(clienteId) {
 export async function crearPedido({ usuario, clienteId = null, items, metodoPago, origen, mesa = null, enviarACocina = false, codigoCupon = null, ip }) {
   if (!items?.length) throw badRequest('El pedido debe tener al menos un producto.');
   if (origen === 'Mozo' && !mesa) throw unprocessable('Indicá el número de mesa.');
+  if (!moduloActivo('cupones')) codigoCupon = null; // módulo apagado por el superadmin
   // El pedido del mozo queda en la mesa abierta (si no estaba abierta, se abre ahora).
   const apertura = origen === 'Mozo' ? await abrirMesa({ mozo: usuario, numero: mesa }) : null;
 
@@ -212,7 +214,7 @@ export async function actualizarPedido(id, { items, metodoPago, clienteId, codig
 
 /** Otorga puntos (una sola vez) según la tabla de reglas. */
 async function otorgarPuntos(pedido) {
-  if (!pedido.cliente || (await pedidosRepo.existePuntos(pedido.id))) return 0;
+  if (!moduloActivo('puntos') || !pedido.cliente || (await pedidosRepo.existePuntos(pedido.id))) return 0;
   const regla = await reglasPuntosRepo.findByTotal(pedido.total);
   const puntos = regla ? regla.puntos_base : 1;
   await pedidosRepo.insertPuntos({ cliente_id: pedido.cliente.id, pedido_id: pedido.id, cantidad: puntos });
@@ -283,9 +285,34 @@ export function listarPedidosCaja({ vista = 'activos', search, page, perPage }) 
   return pedidosRepo.list(opts);
 }
 
+/**
+ * Pedidos de la cocina. En el paquete Tótem (sin caja) la cocina también ve los "Listos" de hoy
+ * para marcar Entregado cuando el cliente lo retira.
+ */
 export async function listarPedidosCocina({ order = 'asc' } = {}) {
   const { rows } = await pedidosRepo.list({ estados: ['En Preparacion'], order, withDetalles: true });
-  return rows.filter((p) => p.requiere_cocina);
+  const enPreparacion = rows.filter((p) => p.requiere_cocina);
+  if (!esTotem()) return enPreparacion;
+  const listos = await pedidosRepo.list({ estados: ['Listo'], fecha: today(), fechaCampo: 'updated_at', order: 'asc', withDetalles: true, excluirOrigen: 'Mozo' });
+  return [...enPreparacion, ...listos.rows];
+}
+
+/**
+ * Tótem: un pedido del kiosco va directo a la cocina; si no tiene nada para elaborar (solo
+ * bebidas, postres...) queda Listo para retirar en el mostrador.
+ */
+export async function despacharPedidoTotem(pedido) {
+  if (pedido.requiere_cocina) return pedido.estado === 'En Preparacion' ? pedido : cambiarEstado(pedido.id, 'En Preparacion');
+  return cambiarEstado(pedido.id, 'Listo');
+}
+
+/** Tótem: el cliente retiró su pedido; como no hay caja, el pago queda completado al entregar. */
+export async function entregarPedidoTotem(id) {
+  if (!esTotem()) throw forbidden('Solo en el paquete Tótem la cocina marca la entrega (si no, lo hace la caja).');
+  const pedido = await pedidosRepo.findById(id, { withDetalles: false });
+  if (!pedido) throw notFound('Pedido no encontrado.');
+  if (pedido.estado !== 'Listo') throw conflict(`El pedido ${pedido.codigo} no está listo para entregar.`);
+  return cambiarEstado(id, 'Entregado', { completarPago: true });
 }
 
 /** Pantalla pública: pedidos de hoy en preparación y listos para retirar. */

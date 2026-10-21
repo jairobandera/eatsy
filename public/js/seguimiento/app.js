@@ -1,7 +1,7 @@
 import { api } from '../core/api.js';
 import { createRealtime } from '../core/realtime.js';
 import { play } from '../core/sound.js';
-import { html, withLoading } from '../core/ui.js';
+import { html, nombreNegocio, withLoading } from '../core/ui.js';
 
 /**
  * Seguimiento del pedido en el celular del cliente.
@@ -33,7 +33,7 @@ function mostrarForm({ codigo = '' } = {}) {
   rt?.close();
   rt = null;
   clearInterval(pollTimer);
-  document.title = 'Mi pedido · Eatsy';
+  document.title = `Mi pedido · ${nombreNegocio()}`;
   $('vista-estado').hidden = true;
   $('vista-form').hidden = false;
   form.reset();
@@ -81,7 +81,7 @@ function mostrarEstado(p, { avisar = true } = {}) {
   }
 
   if (p.estado === 'Listo' && anterior !== 'Listo' && avisar) avisarListo();
-  if (p.estado !== 'Listo') document.title = 'Mi pedido · Eatsy';
+  if (p.estado !== 'Listo') document.title = `Mi pedido · ${nombreNegocio()}`;
 }
 
 // ───────────── Aviso de "pedido listo" ─────────────
@@ -103,7 +103,7 @@ function avisarListo() {
   // Título parpadeante si la pestaña está en segundo plano.
   let on = false;
   const blink = setInterval(() => {
-    document.title = (on = !on) ? '🔔 ¡Tu pedido está listo!' : `${pedido.codigo} · Eatsy`;
+    document.title = (on = !on) ? '🔔 ¡Tu pedido está listo!' : `${pedido.codigo} · ${nombreNegocio()}`;
     if (pedido?.estado !== 'Listo') clearInterval(blink);
   }, 1000);
 

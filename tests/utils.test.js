@@ -69,3 +69,34 @@ test('mesa: código de 4 dígitos y token de acceso que no vale como sesión ni 
   assert.equal(readSeguimiento(req(`ap_seguimiento=${acceso}`)), null);
   assert.equal(readMesaAcceso(req(`ap_mesa=${createToken({ id: 1, rol: 'Mozo' })}`)), null);
 });
+
+test('paquetes: roles habilitados, licencia y colores de la marca', async () => {
+  const { DEFAULTS, estadoLicencia, licenciaBloqueada, paletaMarca, rolesHabilitados } = await import('../src/services/config.service.js');
+  const cfg = (cambios) => ({ ...structuredClone(DEFAULTS), ...cambios });
+  assert.deepEqual(rolesHabilitados(cfg({})), ['Administrador', 'Cajero', 'Cocina', 'Mozo', 'Cliente']);
+  assert.deepEqual(rolesHabilitados(cfg({ paquete: { tipo: 'totem', cocina: true } })), ['Administrador', 'Cliente', 'Cocina']);
+  assert.deepEqual(rolesHabilitados(cfg({ paquete: { tipo: 'totem', cocina: false } })), ['Administrador', 'Cliente']);
+
+  const lic = (licencia) => cfg({ licencia: { suspendida: false, motivo: '', ...licencia } });
+  assert.equal(estadoLicencia(lic({ vence: null }), '2026-10-21').estado, 'ok');
+  assert.equal(estadoLicencia(lic({ vence: '2026-12-01' }), '2026-10-21').estado, 'ok');
+  assert.equal(estadoLicencia(lic({ vence: '2026-10-25' }), '2026-10-21').estado, 'por_vencer');
+  assert.equal(estadoLicencia(lic({ vence: '2026-10-21' }), '2026-10-21').estado, 'por_vencer', 'el día del vencimiento todavía funciona');
+  assert.equal(estadoLicencia(lic({ vence: '2026-10-20' }), '2026-10-21').estado, 'vencida');
+  assert.equal(estadoLicencia(lic({ vence: null, suspendida: true }), '2026-10-21').estado, 'suspendida');
+  assert.ok(licenciaBloqueada(lic({ vence: '2026-10-20' }), '2026-10-21'));
+  assert.ok(!licenciaBloqueada(lic({ vence: '2026-10-21' }), '2026-10-21'));
+
+  const p = paletaMarca('#ff5722');
+  assert.equal(p.brand, '#ff5722');
+  assert.match(p.dark, /^#[0-9a-f]{6}$/);
+  assert.equal(paletaMarca('cualquier-cosa').brand, '#ff5722', 'color inválido → el de siempre');
+});
+
+test('superadmin: su token no vale si no está configurado', async () => {
+  const { loadUser } = await import('../src/middlewares/auth.js');
+  const token = createToken({ id: 0, nombre: 'Superadmin', rol: 'Superadmin', sa: true });
+  const req = { headers: { cookie: `ap_session=${token}` } };
+  await loadUser(req, {}, () => {});
+  assert.equal(req.user, undefined);
+});

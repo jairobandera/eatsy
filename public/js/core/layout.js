@@ -1,5 +1,5 @@
 import { api } from './api.js';
-import { confirmDialog, escapeHtml, showError } from './ui.js';
+import { confirmDialog, escapeHtml, getNegocio, moduloActivo, nombreNegocio, showError } from './ui.js';
 import { isMuted, setMuted } from './sound.js';
 
 /** Menús por sección. */
@@ -21,6 +21,7 @@ const MENUS = {
     { href: '/llamados', icon: 'display', label: 'Llamados', external: true },
   ],
   cocina: [{ href: '/cocina', icon: 'fire', label: 'Pedidos en preparación' }],
+  superadmin: [{ href: '/superadmin', icon: 'shield-lock', label: 'Configuración de la instalación' }],
   mozo: [
     { href: '/mozo', icon: 'grid-3x3-gap', label: 'Mis mesas' },
     { href: '/mozo/pedido', icon: 'plus-circle', label: 'Nuevo pedido' },
@@ -48,16 +49,38 @@ export async function logout() {
   }
 }
 
+/** Aviso (al administrador) de que el servicio está por vencer. */
+function avisoLicencia(negocio, user) {
+  const lic = negocio?.licencia;
+  if (!lic || !['Administrador', 'Superadmin'].includes(user.rol)) return '';
+  if (lic.estado === 'por_vencer') {
+    const [y, m, d] = lic.vence.split('-');
+    const cuando = lic.dias === 0 ? 'hoy' : lic.dias === 1 ? 'mañana' : `el ${d}/${m}/${y}`;
+    return `<div class="alert alert-warning rounded-0 mb-0 py-2 text-center small" role="alert"><i class="bi bi-exclamation-triangle-fill me-1"></i>El servicio vence <b>${cuando}</b>. Comunicate con el proveedor para renovarlo y no perder el acceso.</div>`;
+  }
+  if (user.rol === 'Superadmin' && ['vencida', 'suspendida'].includes(lic.estado)) {
+    return `<div class="alert alert-danger rounded-0 mb-0 py-2 text-center small" role="alert"><i class="bi bi-slash-circle me-1"></i>Licencia ${lic.estado}: el negocio no puede usar la app (vos sí, como superadmin).</div>`;
+  }
+  return '';
+}
+
 /**
  * Monta la barra de navegación en <header id="app-navbar">.
  * @param {'admin'|'caja'|'cocina'|'mozo'} section
  * @param {{ realtime?: boolean, sound?: boolean }} opts
  */
 export async function mountLayout(section, { realtime = false, sound = false } = {}) {
-  const user = await getUser();
+  const [user, negocio] = await Promise.all([getUser(), getNegocio()]);
   const host = document.getElementById('app-navbar');
   const path = location.pathname.replace(/\/$/, '') || '/';
-  const links = [...MENUS[section], ...(user.rol === 'Administrador' && section !== 'admin' ? [{ href: '/admin', icon: 'gear', label: 'Administración' }] : [])];
+  const esAdmin = user.rol === 'Administrador' || user.rol === 'Superadmin';
+  const extras = [
+    ...(esAdmin && section !== 'admin' ? [{ href: '/admin', icon: 'gear', label: 'Administración' }] : []),
+    ...(user.rol === 'Superadmin' && section !== 'superadmin' ? [{ href: '/superadmin', icon: 'shield-lock', label: 'Superadmin' }] : []),
+  ];
+  // Secciones que el superadmin apagó (módulos) no aparecen en el menú.
+  const OCULTAR = { '/admin/reglas-puntos': 'puntos', '/admin/estadisticas': 'estadisticas' };
+  const links = [...MENUS[section], ...extras].filter((l) => !OCULTAR[l.href] || moduloActivo(negocio, OCULTAR[l.href]));
 
   const linkHtml = links
     .map(
@@ -72,8 +95,8 @@ export async function mountLayout(section, { realtime = false, sound = false } =
     <nav class="navbar navbar-expand-xl navbar-dark app-navbar sticky-top shadow-sm">
       <div class="container-fluid px-3 px-lg-4">
         <a class="navbar-brand d-flex align-items-center gap-2" href="${links[0].href}">
-          <span class="brand-logo"><img src="/img/logo.png" alt="Eatsy"></span>
-          <span class="fw-semibold d-none d-sm-inline">${{ admin: 'Administración', caja: 'Caja', cocina: 'Cocina', mozo: 'Mozo' }[section]}</span>
+          <span class="brand-logo"><img src="/negocio/logo" alt="${escapeHtml(nombreNegocio())}"></span>
+          <span class="fw-semibold d-none d-sm-inline">${{ admin: 'Administración', caja: 'Caja', cocina: 'Cocina', mozo: 'Mozo', superadmin: 'Superadmin' }[section]}</span>
         </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMain" aria-controls="navMain" aria-expanded="false" aria-label="Menú">
           <span class="navbar-toggler-icon"></span>
@@ -88,7 +111,8 @@ export async function mountLayout(section, { realtime = false, sound = false } =
           </div>
         </div>
       </div>
-    </nav>`;
+    </nav>
+    ${avisoLicencia(negocio, user)}`;
 
   host.querySelector('#btn-logout').addEventListener('click', logout);
 

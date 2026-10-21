@@ -1,5 +1,5 @@
 /* global JsBarcode */
-import { formatDateTime, html, money } from './ui.js';
+import { formatDateTime, html, money, nombreNegocio } from './ui.js';
 
 /**
  * Genera el HTML del ticket (lo usan la caja y el kiosco).
@@ -9,7 +9,7 @@ import { formatDateTime, html, money } from './ui.js';
 export function ticketHtml(p, { titulo = 'Comprobante de pedido', mostrarCliente = true } = {}) {
   const descuentos = (p.detalles || []).reduce((s, d) => s + (d.descuento || 0), 0);
   return html`
-    <img src="/img/logo.png" alt="Eatsy" class="logo">
+    <img src="/negocio/logo" alt="${nombreNegocio()}" class="logo">
     <h1>${titulo}</h1>
     <div class="center">${formatDateTime(p.created_at, { withYear: true })}${p.origen ? ` · ${p.origen}` : ''}</div>
     <hr>

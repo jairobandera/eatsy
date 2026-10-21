@@ -12,6 +12,8 @@ import { hashPassword } from '../utils/password.js';
 import { paginated } from '../utils/validator.js';
 import { avisarCatalogo, createCatalogService } from './catalogo.service.js';
 import { nuevoQrToken } from './mesas.service.js';
+import { ROL_LABEL } from './auth.service.js';
+import { obtenerConfig, rolHabilitado } from './config.service.js';
 import { conPrecios } from './pricing.service.js';
 
 // ───────────── Categorías e ingredientes ─────────────
@@ -38,11 +40,35 @@ const usuariosBase = createCatalogService({
   },
 });
 
+/**
+ * Reglas del paquete para tener un usuario activo con ese rol: el rol tiene que estar incluido
+ * y no superar el límite de usuarios activos (lo configura el superadmin).
+ */
+async function validarRolDelPaquete(rol, { excludeId = 0 } = {}) {
+  if (!rolHabilitado(rol)) throw conflict(`El paquete contratado no incluye usuarios de tipo ${ROL_LABEL[rol] || rol}.`);
+  const limite = obtenerConfig().limites[rol];
+  if (limite != null && (await usuariosRepo.countActivosPorRol(rol, { excludeId })) >= limite) {
+    throw conflict(`El paquete contratado permite hasta ${limite} usuario${limite === 1 ? '' : 's'} activo${limite === 1 ? '' : 's'} de tipo ${ROL_LABEL[rol] || rol}.`);
+  }
+}
+
 export const usuariosService = {
   ...usuariosBase,
 
+  async create(data, actor) {
+    await validarRolDelPaquete(data.rol);
+    return usuariosBase.create(data, actor);
+  },
+
+  async habilitar(id, actor) {
+    const usuario = await usuariosBase.getOrFail(id);
+    await validarRolDelPaquete(usuario.rol, { excludeId: id });
+    return usuariosBase.habilitar(id, actor);
+  },
+
   async update(id, data, actor) {
     const usuario = await usuariosBase.getOrFail(id);
+    if (usuario.activo && usuario.rol !== data.rol) await validarRolDelPaquete(data.rol, { excludeId: id });
     if (usuario.rol === 'Administrador' && data.rol !== 'Administrador' && (await usuariosRepo.countActiveAdmins({ excludeId: id })) === 0) {
       throw conflict('No podés quitarle el rol al último administrador activo.');
     }

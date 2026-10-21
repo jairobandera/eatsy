@@ -1,6 +1,6 @@
 /* global bootstrap */
 import { api } from '../core/api.js';
-import { escapeHtml, html, showError } from '../core/ui.js';
+import { escapeHtml, getNegocio, html, showError } from '../core/ui.js';
 import { createCrudPage, value } from './crud-page.js';
 
 const ROLES = [
@@ -11,6 +11,11 @@ const ROLES = [
   { value: 'Cliente', label: 'Kiosco (autoservicio)', icon: 'tablet', color: 'info' },
 ];
 const rolInfo = (rol) => ROLES.find((r) => r.value === rol) || ROLES[0];
+
+// Solo los roles que incluye el paquete contratado (y su límite, si el superadmin puso uno).
+const negocio = await getNegocio();
+const rolesDelPaquete = ROLES.filter((r) => !negocio.roles?.length || negocio.roles.includes(r.value));
+const limiteDe = (rol) => negocio.limites?.[rol];
 
 await createCrudPage({
   endpoint: '/admin/usuarios',
@@ -54,9 +59,11 @@ await createCrudPage({
     </div>
     <label class="form-label fw-medium" for="f-rol">Rol <span class="text-danger">*</span></label>
     <select class="form-select" id="f-rol" name="rol" required>
-      ${ROLES.map((r) => html`<option value="${r.value}" ${u?.rol === r.value ? 'selected' : ''}>${r.label}</option>`)}
+      ${[...rolesDelPaquete, ...(u && !rolesDelPaquete.some((r) => r.value === u.rol) ? [rolInfo(u.rol)] : [])].map(
+        (r) => html`<option value="${r.value}" ${u?.rol === r.value ? 'selected' : ''}>${r.label}${limiteDe(r.value) != null ? ` (máx. ${limiteDe(r.value)})` : ''}</option>`,
+      )}
     </select>
-    <div class="form-text">Los mozos reciben un código QR para poner en sus mesas.</div>`.toString(),
+    <div class="form-text">${rolesDelPaquete.some((r) => r.value === 'Mozo') ? 'Los mozos reciben un código QR para poner en sus mesas. ' : ''}Solo se muestran los tipos de usuario que incluye el paquete contratado.</div>`.toString(),
   read: (form) => {
     const body = { nombre: value(form, 'nombre'), rol: value(form, 'rol') };
     const pass = form.elements.contrasena.value;
@@ -114,7 +121,7 @@ async function verQr(id, { recienCreado = false } = {}) {
 function imprimir() {
   if (!actual) return;
   const tarjeta = `<div class="tarjeta">
-      <img src="/img/logo.png" alt="" class="logo">
+      <img src="/negocio/logo" alt="" class="logo">
       <div class="qr">${actual.svg}</div>
       <h2>Escaneá con tu celular</h2>
       <p>Mirá cómo va tu pedido y llamá a tu mozo sin levantarte.</p>

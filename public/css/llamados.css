@@ -2,7 +2,7 @@
 body.llamados { background: #14171a; color: #fff; min-height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 .llamados-header {
   display: flex; align-items: center; justify-content: space-between; gap: 1rem;
-  padding: 1rem 2rem; background: linear-gradient(120deg, #ff5722, #ff8a50);
+  padding: 1rem 2rem; background: linear-gradient(120deg, var(--brand), var(--brand-light));
 }
 .llamados-header .logo { height: clamp(44px, 6vw, 72px); background: #fff; border-radius: 0.75rem; padding: 4px 8px; }
 .llamados-header h1 { margin: 0; font-weight: 800; font-size: clamp(1.5rem, 3.5vw, 3rem); }
@@ -19,7 +19,7 @@ body.llamados { background: #14171a; color: #fff; min-height: 100vh; display: fl
 .qr-card { display: flex; align-items: center; gap: 1rem; margin-top: 1.5rem; padding: 1rem; border-radius: 1.25rem; background: #fff; color: #14171a; }
 .qr-img { flex: 0 0 auto; width: clamp(110px, 11vw, 170px); aspect-ratio: 1; }
 .qr-img svg { width: 100%; height: 100%; display: block; }
-.qr-title { font-weight: 700; font-size: clamp(1rem, 1.4vw, 1.3rem); color: #ff5722; }
+.qr-title { font-weight: 700; font-size: clamp(1rem, 1.4vw, 1.3rem); color: var(--brand); }
 .qr-text { margin: 0.25rem 0; font-size: clamp(0.8rem, 1vw, 0.95rem); color: #495057; }
 .qr-url { font-size: 0.75rem; color: #868e96; word-break: break-all; }
 .col-preparando h2 { color: #ffc107; }
@@ -39,7 +39,7 @@ body.llamados { background: #14171a; color: #fff; min-height: 100vh; display: fl
 .ticket-listo .quitar { position: absolute; top: 0.4rem; right: 0.7rem; border: 0; background: transparent; color: inherit; font-size: 1.6rem; opacity: 0.35; }
 .ticket-listo .quitar:hover { opacity: 0.9; }
 .ticket-listo.llamando { animation: llamando 0.8s ease-in-out 10; }
-@keyframes llamando { 50% { transform: scale(1.06); background: #fff; color: #ff5722; } }
+@keyframes llamando { 50% { transform: scale(1.06); background: #fff; color: var(--brand); } }
 
 .sound-hint { position: fixed; bottom: 1rem; left: 50%; transform: translateX(-50%); background: rgba(0, 0, 0, 0.7); padding: 0.5rem 1.25rem; border-radius: 2rem; font-size: 0.9rem; }
 

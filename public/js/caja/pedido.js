@@ -2,7 +2,7 @@
 import { api } from '../core/api.js';
 import { mountLayout } from '../core/layout.js';
 import { createRealtime } from '../core/realtime.js';
-import { confirmDialog, debounce, escapeHtml, html, money, renderPagination, showError, toast, withLoading } from '../core/ui.js';
+import { confirmDialog, debounce, escapeHtml, getNegocio, html, money, moduloActivo, renderPagination, showError, toast, withLoading } from '../core/ui.js';
 import { abrirComprobante, clienteNombre } from './shared.js';
 import { initClientes } from './clientes.js';
 
@@ -15,6 +15,7 @@ const MOZO = location.pathname.startsWith('/mozo');
 const BASE = MOZO ? '/mozo' : '/caja';
 await mountLayout(MOZO ? 'mozo' : 'caja', { realtime: true, sound: MOZO });
 const app = document.getElementById('app');
+const cuponesActivos = moduloActivo(await getNegocio(), 'cupones');
 const params = new URLSearchParams(location.search);
 const editId = Number(params.get('id')) || null;
 const MAX_MESA = 999;
@@ -323,6 +324,7 @@ const totalPedido = () => subtotalPedido() - descuentoCupon();
 
 function renderCupon() {
   const box = app.querySelector('#cupon-panel');
+  if (!cuponesActivos) return box.replaceChildren(); // módulo apagado por el superadmin
   const c = state.cupon;
   if (!c) {
     box.innerHTML = `<div class="input-group input-group-sm">
