@@ -111,7 +111,7 @@ Desde `/superadmin` se configura (todo se aplica al instante):
 | **Límites** | Máximo de usuarios activos por tipo (ej. 2 kioscos). Vacío = sin límite. |
 | **Módulos** | Prender o apagar cupones, puntos de clientes, seguimiento por QR y estadísticas. Con **cupones** apagados se siguen usando las promociones automáticas (porcentaje y monto fijo por producto), pero no se pueden crear cupones con código y los existentes se deshabilitan. |
 
-Sin configuración guardada, la instalación funciona como siempre (Full, sin vencimiento, marca Eatsy). Al guardar, todas las pantallas abiertas se recargan solas para aplicar los cambios (si alguien tiene un pedido a medio cargar o un formulario abierto, le aparece un aviso con **Recargar** en lugar de recargarse de golpe).
+Sin configuración guardada, la instalación funciona como siempre (Full, sin vencimiento, marca Eatsy). Al guardar, las pantallas abiertas **no se recargan solas** (alguien puede estar cobrando o cargando un pedido): les aparece un cartel *"Hay una actualización de la configuración"* con **Actualizar** y **Más tarde**; con *Más tarde* los cambios se aplican la próxima vez que recarguen (F5). Solo el monitor de **/llamados** se recarga solo.
 
 **Respaldo**: el botón **Descargar respaldo** baja la base completa (estructura + datos) en un archivo `.sql`. Para restaurarlo, en una base vacía: `mysql -u usuario -p nombre_base < respaldo.sql`.
 
