@@ -5,6 +5,49 @@
  *   rt.on('pedido:creado', (pedido) => ...);
  *   rt.onReconnect(() => recargarDatos());   // por si se perdieron eventos
  */
+// ───────────── Cambios de configuración (superadmin) ─────────────
+// Cuando el superadmin guarda cambios (marca, paquete, módulos...), todas las pantallas se recargan
+// solas para aplicarlos. Si la pantalla tiene trabajo sin guardar (ej. un pedido a medio cargar),
+// en vez de recargar muestra un aviso con un botón para hacerlo cuando el usuario termine.
+let trabajoEnCurso = () => false;
+let recargaDesactivada = false;
+let recargaEnCurso = false;
+
+/** La pantalla indica si tiene algo sin guardar (para no recargarla de golpe). */
+export const marcarTrabajoEnCurso = (fn) => (trabajoEnCurso = fn);
+/** Pantallas que no se recargan (la del superadmin, que es la que guarda). */
+export const desactivarRecargaPorConfig = () => (recargaDesactivada = true);
+
+function avisoConfig(texto, { boton = false } = {}) {
+  document.getElementById('aviso-config')?.remove();
+  const el = document.createElement('div');
+  el.id = 'aviso-config';
+  el.setAttribute('role', 'status');
+  el.style.cssText =
+    'position:fixed;left:50%;bottom:1rem;transform:translateX(-50%);z-index:3000;background:#212529;color:#fff;padding:.7rem 1rem;border-radius:2rem;box-shadow:0 .5rem 1.25rem rgba(0,0,0,.25);display:flex;align-items:center;gap:.75rem;font:500 .95rem/1.3 system-ui,sans-serif;max-width:calc(100% - 2rem)';
+  el.textContent = texto;
+  if (boton) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = 'Recargar';
+    b.style.cssText = 'border:0;border-radius:2rem;padding:.35rem .9rem;font-weight:600;background:var(--brand,#ff5722);color:#fff;cursor:pointer';
+    b.onclick = () => location.reload();
+    el.append(b);
+  }
+  document.body.append(el);
+}
+
+function alCambiarConfig() {
+  if (recargaDesactivada || recargaEnCurso) return;
+  if (trabajoEnCurso()) {
+    avisoConfig('Se actualizó la configuración del sistema. Recargá cuando termines.', { boton: true });
+    return;
+  }
+  recargaEnCurso = true;
+  avisoConfig('Se actualizó la configuración del sistema. Recargando…');
+  setTimeout(() => location.reload(), 2000);
+}
+
 export function createRealtime({ path = '/ws', onStatus } = {}) {
   const handlers = new Map();
   const reconnectHandlers = [];
@@ -42,6 +85,7 @@ export function createRealtime({ path = '/ws', onStatus } = {}) {
       } catch {
         return;
       }
+      if (msg.type === 'config:actualizada') alCambiarConfig();
       (handlers.get(msg.type) || []).forEach((fn) => fn(msg.data, msg));
       (handlers.get('*') || []).forEach((fn) => fn(msg.data, msg));
     });

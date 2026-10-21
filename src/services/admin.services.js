@@ -13,7 +13,7 @@ import { paginated } from '../utils/validator.js';
 import { avisarCatalogo, createCatalogService } from './catalogo.service.js';
 import { nuevoQrToken } from './mesas.service.js';
 import { ROL_LABEL } from './auth.service.js';
-import { obtenerConfig, rolHabilitado } from './config.service.js';
+import { moduloActivo, obtenerConfig, rolHabilitado } from './config.service.js';
 import { conPrecios } from './pricing.service.js';
 
 // ───────────── Categorías e ingredientes ─────────────
@@ -240,6 +240,19 @@ const promoRecord = (d) => ({
   fecha_fin: d.fecha_fin || null,
 });
 
+const CUPONES_APAGADOS = 'Los cupones con código no están incluidos en el paquete contratado: solo se pueden crear promociones automáticas.';
+/** Con el módulo de cupones apagado no se pueden crear, editar ni habilitar promociones con código. */
+const exigirCupones = (codigo) => {
+  if (codigo && !moduloActivo('cupones')) throw conflict(CUPONES_APAGADOS);
+};
+
+/** Deshabilita todos los cupones (promociones con código): se usa al apagar el módulo. */
+export async function deshabilitarCupones() {
+  const n = await promocionesRepo.deshabilitarConCodigo();
+  if (n) avisarCatalogo('promociones');
+  return n;
+}
+
 export const promocionesService = {
   async list({ activo, buscar, page, perPage }) {
     await promocionesRepo.deactivateExpired(today());
@@ -255,6 +268,7 @@ export const promocionesService = {
 
   async create(data) {
     if (await promocionesRepo.existsByName(data.nombre)) throw conflict(`Ya existe una promoción llamada "${data.nombre}".`);
+    exigirCupones(promoRecord(data).codigo);
     await validarPromo(data);
     const id = await transaction(async () => {
       const newId = await promocionesRepo.insert(promoRecord(data));
@@ -268,6 +282,7 @@ export const promocionesService = {
   async update(id, data) {
     await this.get(id);
     if (await promocionesRepo.existsByName(data.nombre, { excludeId: id })) throw conflict(`Ya existe otra promoción llamada "${data.nombre}".`);
+    exigirCupones(promoRecord(data).codigo);
     await validarPromo(data, id);
     await transaction(async () => {
       await promocionesRepo.update(id, promoRecord(data));
@@ -287,6 +302,7 @@ export const promocionesService = {
   async habilitar(id) {
     const promo = await this.get(id);
     if (promo.fecha_fin && promo.fecha_fin < today()) throw conflict('No se puede habilitar: la promoción ya venció. Editá la fecha de fin primero.');
+    exigirCupones(promo.codigo);
     if (await promocionesRepo.existsByName(promo.nombre, { excludeId: id, onlyActive: true })) {
       throw conflict(`No se puede habilitar: ya hay otra promoción activa llamada "${promo.nombre}".`);
     }

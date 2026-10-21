@@ -229,7 +229,7 @@ async function guardar(e) {
   await withLoading(app.querySelector('#guardar'), async () => {
     try {
       datos = await api.put('/superadmin', body);
-      toast('Configuración guardada');
+      toast('Configuración guardada', 'success', datos.cupones_deshabilitados ? { text: `Se deshabilitaron ${datos.cupones_deshabilitados} cupón(es) con código.` } : {});
       render();
     } catch (err) {
       showError(err, 'No se pudo guardar');

@@ -1,6 +1,7 @@
 import { api } from './api.js';
 import { confirmDialog, escapeHtml, getNegocio, moduloActivo, nombreNegocio, showError } from './ui.js';
 import { isMuted, setMuted } from './sound.js';
+import { createRealtime, desactivarRecargaPorConfig } from './realtime.js';
 
 /** Menús por sección. */
 const MENUS = {
@@ -95,7 +96,7 @@ export async function mountLayout(section, { realtime = false, sound = false } =
     <nav class="navbar navbar-expand-xl navbar-dark app-navbar sticky-top shadow-sm">
       <div class="container-fluid px-3 px-lg-4">
         <a class="navbar-brand d-flex align-items-center gap-2" href="${links[0].href}">
-          <span class="brand-logo"><img src="/negocio/logo" alt="${escapeHtml(nombreNegocio())}"></span>
+          <span class="brand-logo"><img src="${negocio.logo_url || '/negocio/logo'}" alt="${escapeHtml(nombreNegocio())}"></span>
           <span class="fw-semibold d-none d-sm-inline">${{ admin: 'Administración', caja: 'Caja', cocina: 'Cocina', mozo: 'Mozo', superadmin: 'Superadmin' }[section]}</span>
         </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMain" aria-controls="navMain" aria-expanded="false" aria-label="Menú">
@@ -121,6 +122,11 @@ export async function mountLayout(section, { realtime = false, sound = false } =
     setMuted(!isMuted());
     soundBtn.innerHTML = `<i class="bi bi-volume-${isMuted() ? 'mute' : 'up'}"></i>`;
   });
+
+  // Cambios de configuración del superadmin: las pantallas sin WebSocket propio abren uno liviano solo
+  // para enterarse y recargarse. La del superadmin no se recarga (es la que guarda).
+  if (section === 'superadmin') desactivarRecargaPorConfig();
+  else if (!realtime) createRealtime();
 
   if (realtime) {
     const el = host.querySelector('#rt-status');
