@@ -6,6 +6,7 @@ import {
   MODULOS,
   PAQUETES,
   ROLES_LIMITABLES,
+  TIPOS_LICENCIA,
   colorValido,
   estadoLicencia,
   guardarConfig,
@@ -14,6 +15,8 @@ import {
   rolesHabilitados,
   versionConfig,
 } from '../services/config.service.js';
+import { generarRespaldo, nombreRespaldo } from '../services/respaldo.service.js';
+import { guardarInstalaciones, panelInstalaciones } from '../services/instalaciones.service.js';
 import { invalidarPaginas } from '../utils/assets.js';
 import { isValidYmd } from '../utils/dates.js';
 import { badRequest, unprocessable } from '../utils/http-error.js';
@@ -76,6 +79,7 @@ export const superadminController = {
       cocina: { type: 'boolean', default: true },
     });
     const licencia = validate(b.licencia, {
+      tipo: { type: 'enum', values: TIPOS_LICENCIA, default: 'pago', label: 'tipo de licencia' },
       vence: { type: 'string', maxLength: 10, label: 'vencimiento' },
       suspendida: { type: 'boolean', default: false },
       motivo: { type: 'string', maxLength: 200 },
@@ -93,7 +97,13 @@ export const superadminController = {
     const actual = obtenerConfig();
     await guardarConfig({
       paquete,
-      licencia: { vence: licencia.vence || null, suspendida: licencia.suspendida, motivo: licencia.motivo || '' },
+      // Gratuita: no tiene fecha de vencimiento (dura hasta que se pase a pago o se suspenda).
+      licencia: {
+        tipo: licencia.tipo,
+        vence: licencia.tipo === 'gratis' ? null : licencia.vence || null,
+        suspendida: licencia.suspendida,
+        motivo: licencia.motivo || '',
+      },
       negocio: { ...actual.negocio, nombre: negocio.nombre, color: negocio.color.toLowerCase() },
       limites: Object.fromEntries(ROLES_LIMITABLES.map((r) => [r, limites[r] ?? null])),
       modulos,
@@ -108,6 +118,42 @@ export const superadminController = {
     await guardarConfig({ negocio: { ...obtenerConfig().negocio, logo: dataUrl } });
     despuesDeGuardar();
     res.json(await resumen());
+  },
+
+  /** Panel central: esta instalación y las demás guardadas, con su estado. */
+  instalaciones: async (_req, res) => res.json(await panelInstalaciones()),
+
+  guardarInstalaciones: async (req, res) => {
+    const { lista } = validate(req.body, {
+      lista: {
+        type: 'array',
+        required: true,
+        items: { type: 'object', schema: { nombre: { type: 'string', maxLength: 60 }, url: { type: 'string', required: true, maxLength: 300, label: 'dirección' } } },
+      },
+    });
+    try {
+      await guardarInstalaciones(lista);
+    } catch (err) {
+      if (err.status === 422) throw unprocessable(err.message);
+      throw err;
+    }
+    res.json(await panelInstalaciones());
+  },
+
+  /** Descarga un respaldo completo de la base (.sql). */
+  respaldo: async (_req, res) => {
+    res.set({
+      'Content-Type': 'application/sql; charset=utf-8',
+      'Content-Disposition': `attachment; filename="${nombreRespaldo(obtenerConfig().negocio.nombre)}"`,
+    });
+    try {
+      await generarRespaldo((chunk) => (res.write(chunk) ? undefined : new Promise((ok) => res.once('drain', ok))));
+      res.end();
+    } catch (err) {
+      console.error('[respaldo]', err);
+      // Ya se empezó a mandar el archivo: se corta con una marca para que no parezca completo.
+      res.end('\n-- ERROR: el respaldo quedó incompleto.\n');
+    }
   },
 
   quitarLogo: async (_req, res) => {

@@ -97,7 +97,7 @@ Tené en cuenta:
 
 Cada negocio tiene **su propia instalación** (su servicio en Render y su base). En cada una hay un **superadmin oculto** para el proveedor de la app:
 
-- Se define con las variables `SUPERADMIN_USER` y `SUPERADMIN_PASSWORD` (en producción, contraseña de 12 caracteres o más). No se guarda en la base, no aparece en *Admin → Usuarios* y, sin esas variables, no existe.
+- Se define con las variables `SUPERADMIN_USER` y `SUPERADMIN_PASSWORD` (contraseña de 6 caracteres o más). No se guarda en la base, no aparece en *Admin → Usuarios* y, sin esas variables, no existe.
 - Entra por el login normal y va a **`/superadmin`**. Para cualquier otro usuario esa pantalla y su API responden *404*. También puede entrar al panel del negocio para dar soporte.
 
 Desde `/superadmin` se configura (todo se aplica al instante):
@@ -105,12 +105,16 @@ Desde `/superadmin` se configura (todo se aplica al instante):
 | Sección | Qué hace |
 |---|---|
 | **Paquete** | **Full**: kiosco, caja, cocina, mozos con mesas, llamados y administración. **Tótem**: kiosco, llamados y administración, con o sin usuario de **Cocina**. En Tótem el pedido del kiosco va directo a la cocina (o queda listo si es solo bebidas/postres); la cocina lo marca Listo, aparece en /llamados y, al retirarlo, la cocina toca **Entregado** y el pago queda completado. Sin cocina, el administrador atiende la pantalla de cocina. Los usuarios de roles que el paquete no incluye no pueden entrar (sus sesiones se cortan) ni crearse. |
-| **Licencia** | Fecha de "pago hasta" (7 días antes se le avisa al administrador; al día siguiente del vencimiento se bloquea) y botón para **suspender**. Bloqueada, la app muestra "Servicio suspendido" a todos menos al superadmin. |
+| **Licencia** | **De pago**: fecha de "pago hasta" (7 días antes se le avisa al administrador; al día siguiente del vencimiento se bloquea). **Gratuita**: sin vencimiento, hasta que la pases a pago o la suspendas. En los dos casos hay un botón para **suspender**. Bloqueada, la app muestra "Servicio suspendido" a todos menos al superadmin. |
 | **Negocio** | Nombre, color principal y logo (máx. 300 KB, se guarda en la base). Reemplazan a "Eatsy" en el kiosco, llamados, tickets, login y paneles. |
 | **Límites** | Máximo de usuarios activos por tipo (ej. 2 kioscos). Vacío = sin límite. |
 | **Módulos** | Prender o apagar cupones, puntos de clientes, seguimiento por QR y estadísticas. |
 
 Sin configuración guardada, la instalación funciona como siempre (Full, sin vencimiento, marca Eatsy).
+
+**Respaldo**: el botón **Descargar respaldo** baja la base completa (estructura + datos) en un archivo `.sql`. Para restaurarlo, en una base vacía: `mysql -u usuario -p nombre_base < respaldo.sql`.
+
+**Todas mis instalaciones** (panel central): en la pestaña del mismo nombre cargás las direcciones de tus otras instalaciones y ves de todas el paquete, la licencia, los pedidos y ventas de hoy y del mes, los usuarios y el último pedido, con un botón para entrar a administrarla. Para que se puedan consultar entre sí, definí la **misma** variable `SUPERADMIN_API_KEY` (24 caracteres o más) en todas. Cada instalación responde su estado en `GET /api/superadmin/estado` solo con esa clave (`Authorization: Bearer …`); sin ella, la ruta da 404. Las instalaciones del plan gratis de Render que estén dormidas pueden tardar en contestar: el panel espera hasta 30 s y si no, la marca como "sin respuesta".
 
 ---
 
