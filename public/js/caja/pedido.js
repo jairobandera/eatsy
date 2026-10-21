@@ -1,7 +1,7 @@
 /* global bootstrap */
 import { api } from '../core/api.js';
 import { mountLayout } from '../core/layout.js';
-import { createRealtime } from '../core/realtime.js';
+import { createRealtime, marcarTrabajoEnCurso } from '../core/realtime.js';
 import { confirmDialog, debounce, escapeHtml, getNegocio, html, money, moduloActivo, renderPagination, showError, toast, withLoading } from '../core/ui.js';
 import { abrirComprobante, clienteNombre } from './shared.js';
 import { initClientes } from './clientes.js';
@@ -527,6 +527,8 @@ async function cargarPedido() {
 
 // Si el admin cambia precios/productos, refrescamos el catálogo.
 createRealtime().on('catalogo:actualizado', () => cargarProductos());
+// Con productos cargados, un cambio de configuración no recarga la página de golpe (avisa).
+marcarTrabajoEnCurso(() => state.carrito.length > 0);
 // El mozo sigue recibiendo los avisos (pedido listo, mesa que llama) mientras toma un pedido.
 if (MOZO) import('../mozo/avisos.js').then((m) => m.iniciarAvisosMozo());
 

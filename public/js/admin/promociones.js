@@ -2,8 +2,21 @@ import { api } from '../core/api.js';
 import { debounce, formatDate, getNegocio, html, moduloActivo, money, renderPagination, showError, toast, todayYmd, withLoading } from '../core/ui.js';
 import { createCrudPage, value } from './crud-page.js';
 
-// Si el superadmin apagó los cupones, las promociones siguen (descuentos automáticos) pero sin código.
+// Si el superadmin apagó los cupones, las promociones automáticas siguen pero no se pueden crear cupones.
 const cuponesActivos = moduloActivo(await getNegocio(), 'cupones');
+
+/**
+ * Tres tipos para el administrador (en la base: un cupón es una promoción de monto con código):
+ *  - porcentaje: automático, ej. 25% en postres;
+ *  - monto: automático por producto, ej. $100 menos en cada hamburguesa;
+ *  - cupon: con código, el cliente lo ingresa en el kiosco / el cajero en la caja; descuenta del total.
+ */
+const tipoDe = (p) => (p?.codigo ? 'cupon' : p?.tipo_descuento === 'monto' ? 'monto' : 'porcentaje');
+const TIPOS = {
+  porcentaje: { label: 'Porcentaje (automático)', ayuda: 'Porcentaje de descuento sobre el precio de cada producto incluido (0 a 100). Se aplica solo en el kiosco y la caja.' },
+  monto: { label: 'Monto fijo por producto (automático)', ayuda: 'Se descuenta este monto de cada unidad de los productos incluidos. Se aplica solo en el kiosco y la caja.' },
+  cupon: { label: 'Cupón con código', ayuda: 'Se descuenta este monto del TOTAL del pedido solo si el cliente ingresa el código en el kiosco ("¿Tenés un código de descuento?") o el cajero lo carga en la caja, y el pedido lleva algún producto incluido.' },
+};
 
 const descuentoLabel = (p) =>
   p.tipo_descuento === 'monto' ? `${money(p.descuento)} ${p.codigo ? 'al total' : 'c/u'}` : `${Number(p.descuento)} %`;
@@ -30,32 +43,28 @@ function form(p) {
           <input class="form-control" id="f-nombre" name="nombre" maxlength="255" required value="${p?.nombre || ''}">
           <div class="invalid-feedback">Ingresá un nombre.</div>
         </div>
-        <div class="row g-2 mb-3">
-          <div class="col-6">
-            <label class="form-label fw-medium" for="f-tipo">Tipo</label>
-            <select class="form-select" id="f-tipo" name="tipo_descuento">
-              <option value="porcentaje" ${p?.tipo_descuento !== 'monto' ? 'selected' : ''}>Porcentaje (%)</option>
-              <option value="monto" ${p?.tipo_descuento === 'monto' ? 'selected' : ''}>Monto fijo ($)</option>
-            </select>
-          </div>
-          <div class="col-6">
-            <label class="form-label fw-medium" for="f-desc">Descuento <span class="text-danger">*</span></label>
+        <div class="mb-2">
+          <label class="form-label fw-medium" for="f-tipo">Tipo de promoción</label>
+          <select class="form-select" id="f-tipo" name="tipo">
+            ${['porcentaje', 'monto', ...(cuponesActivos || tipoDe(p) === 'cupon' ? ['cupon'] : [])].map(
+              (t) => html`<option value="${t}" ${tipoDe(p) === t ? 'selected' : ''}>${TIPOS[t].label}${t === 'cupon' && !cuponesActivos ? ' (desactivado)' : ''}</option>`,
+            )}
+          </select>
+          <div class="form-text" id="tipo-help"></div>
+        </div>
+        ${cuponesActivos ? '' : html`<div class="alert alert-light border small py-2 mb-3"><i class="bi bi-info-circle me-1"></i>Los <b>cupones con código</b> no están incluidos en el paquete contratado: solo se pueden crear promociones automáticas.</div>`}
+        <div class="mb-3" id="codigo-wrap">
+          <label class="form-label fw-medium" for="f-codigo">Código del cupón <span class="text-danger">*</span></label>
+          <input class="form-control text-uppercase" id="f-codigo" name="codigo" maxlength="30" pattern="[A-Za-z0-9]{3,30}" value="${p?.codigo || ''}" autocomplete="off" placeholder="Ej. BIENVENIDA">
+          <div class="invalid-feedback">Entre 3 y 30 letras o números, sin espacios.</div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-medium" for="f-desc" id="desc-label">Descuento <span class="text-danger">*</span></label>
+          <div class="input-group">
+            <span class="input-group-text" id="desc-unidad">%</span>
             <input type="number" class="form-control" id="f-desc" name="descuento" min="0" step="0.01" required value="${p?.descuento ?? ''}">
           </div>
-          <div class="col-12"><div class="form-text" id="desc-help"></div></div>
         </div>
-        ${cuponesActivos
-          ? html`<div class="mb-3">
-              <label class="form-label fw-medium" for="f-codigo">Código de cupón (opcional)</label>
-              <input class="form-control text-uppercase" id="f-codigo" name="codigo" maxlength="30" pattern="[A-Za-z0-9]{3,30}" value="${p?.codigo || ''}" autocomplete="off">
-              <div class="invalid-feedback">Entre 3 y 30 letras o números, sin espacios.</div>
-              <div class="form-text" id="codigo-help"></div>
-            </div>`
-          : html`<input type="hidden" id="f-codigo" name="codigo" value="${p?.codigo || ''}">
-            <div class="alert alert-light border small py-2 mb-3"><i class="bi bi-info-circle me-1"></i>Los <b>cupones con código</b> no están incluidos en el paquete contratado.
-              ${p?.codigo
-                ? html`Esta promoción es un cupón (código <b>${p.codigo}</b>): mientras los cupones estén desactivados no se aplica.`
-                : 'Las promociones se aplican solas en el kiosco y la caja.'}<span id="codigo-help" hidden></span></div>`}
         <div class="row g-2">
           <div class="col-6">
             <label class="form-label fw-medium" for="f-ini">Desde</label>
@@ -96,25 +105,19 @@ function onOpen(f) {
 
   const codigo = f.querySelector('#f-codigo');
   const updateHelp = () => {
-    const pct = tipo.value === 'porcentaje';
-    const conCodigo = cuponesActivos && !pct && codigo.value.trim();
-    desc.max = pct ? '100' : '';
-    f.querySelector('#desc-help').textContent = pct
-      ? 'Porcentaje de descuento sobre el precio (0 a 100). Se aplica solo.'
-      : conCodigo
-        ? 'Con código: se descuenta este monto del TOTAL del pedido cuando el cliente ingresa el cupón (si lleva algún producto incluido).'
-        : 'Sin código: se descuenta este monto por unidad de cada producto incluido. Se aplica solo.';
-    // El código (cupón) solo está disponible para promociones de monto fijo.
-    codigo.disabled = pct;
-    if (pct) codigo.value = '';
-    f.querySelector('#codigo-help').textContent = pct
-      ? 'Disponible solo para promociones de monto fijo.'
-      : 'Si cargás un código, la promoción deja de aplicarse sola: el cliente lo ingresa en el kiosco o el cajero en la caja.';
+    const t = tipo.value;
+    const esCupon = t === 'cupon';
+    f.querySelector('#tipo-help').textContent = TIPOS[t].ayuda;
+    f.querySelector('#codigo-wrap').hidden = !esCupon;
+    codigo.required = esCupon;
+    codigo.disabled = !esCupon;
+    f.querySelector('#desc-unidad').textContent = t === 'porcentaje' ? '%' : '$';
+    f.querySelector('#desc-label').firstChild.textContent = t === 'porcentaje' ? 'Porcentaje ' : esCupon ? 'Monto a descontar del total ' : 'Monto a descontar por producto ';
+    desc.max = t === 'porcentaje' ? '100' : '';
   };
   tipo.addEventListener('change', updateHelp);
   codigo.addEventListener('input', () => {
     codigo.value = codigo.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
-    updateHelp();
   });
   updateHelp();
 
@@ -204,11 +207,14 @@ function read(f) {
   const ini = value(f, 'fecha_inicio');
   const fin = value(f, 'fecha_fin');
   if (ini && fin && fin < ini) throw new Error('La fecha "Hasta" debe ser igual o posterior a "Desde".');
+  const tipo = value(f, 'tipo');
+  const codigo = tipo === 'cupon' ? value(f, 'codigo').toUpperCase() : null;
+  if (tipo === 'cupon' && !codigo) throw new Error('Ingresá el código del cupón.');
   return {
     nombre: value(f, 'nombre'),
-    tipo_descuento: value(f, 'tipo_descuento'),
+    tipo_descuento: tipo === 'porcentaje' ? 'porcentaje' : 'monto',
     descuento: Number(value(f, 'descuento')),
-    codigo: value(f, 'tipo_descuento') === 'monto' ? value(f, 'codigo').toUpperCase() || null : null,
+    codigo,
     fecha_inicio: ini || null,
     fecha_fin: fin || null,
     productos: [...seleccion.keys()],
@@ -218,7 +224,9 @@ function read(f) {
 createCrudPage({
   endpoint: '/admin/promociones',
   title: 'Promociones',
-  subtitle: 'Los descuentos vigentes se aplican automáticamente en el kiosco y en la caja.',
+  subtitle: cuponesActivos
+    ? 'Las automáticas se aplican solas en el kiosco y la caja; los cupones, cuando el cliente ingresa el código.'
+    : 'Los descuentos vigentes se aplican automáticamente en el kiosco y en la caja.',
   icon: 'percent',
   singular: 'promoción',
   genero: 'a',
@@ -228,9 +236,9 @@ createCrudPage({
     {
       label: 'Nombre',
       render: (p) =>
-        html`<span class="fw-medium">${p.nombre}</span>${p.codigo
-          ? html`<div class="small"><span class="badge ${cuponesActivos ? 'text-bg-dark' : 'text-bg-secondary'}" title="${cuponesActivos ? '' : 'Los cupones están desactivados en el paquete'}"><i class="bi bi-ticket-perforated me-1"></i>Cupón ${p.codigo}${cuponesActivos ? '' : ' (desactivado)'}</span></div>`
-          : ''}`,
+        html`<span class="fw-medium">${p.nombre}</span><div class="small">${p.codigo
+          ? html`<span class="badge ${cuponesActivos ? 'text-bg-dark' : 'text-bg-secondary'}" title="${cuponesActivos ? 'El cliente ingresa este código' : 'Los cupones están desactivados en el paquete'}"><i class="bi bi-ticket-perforated me-1"></i>Cupón ${p.codigo}${cuponesActivos ? '' : ' (desactivado)'}</span>`
+          : html`<span class="badge text-bg-light border"><i class="bi bi-lightning-charge me-1"></i>Automática</span>`}</div>`,
     },
     { label: 'Descuento', class: 'text-nowrap', render: (p) => html`<span class="badge rounded-pill bg-brand fs-6">${descuentoLabel(p)}</span>` },
     { label: 'Vigencia', render: vigencia },

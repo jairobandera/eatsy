@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import { sql } from '../db/connection.js';
 import { now, today } from '../utils/dates.js';
 
@@ -52,6 +53,12 @@ export async function cargarConfig() {
 
 /** Configuración vigente (sincrónica, desde memoria). */
 export const obtenerConfig = () => actual;
+
+/**
+ * Versión del logo para su URL (?v=): depende del contenido del logo, así es la misma entre
+ * reinicios y cambia apenas se sube otro (el navegador nunca muestra uno viejo).
+ */
+export const versionLogo = () => crypto.createHash('sha1').update(actual.negocio.logo || 'eatsy').digest('hex').slice(0, 12);
 /** Cambia cada vez que se guarda: sirve para invalidar cachés (páginas, logo). */
 export const versionConfig = () => version;
 export const alCambiarConfig = (fn) => listeners.push(fn);

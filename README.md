@@ -109,9 +109,9 @@ Desde `/superadmin` se configura (todo se aplica al instante):
 | **Licencia** | **De pago**: fecha de "pago hasta" (7 días antes se le avisa al administrador; al día siguiente del vencimiento se bloquea). **Gratuita**: sin vencimiento, hasta que la pases a pago o la suspendas. En los dos casos hay un botón para **suspender**. Bloqueada, la app muestra "Servicio suspendido" a todos menos al superadmin. |
 | **Negocio** | Nombre, color principal y logo (máx. 300 KB, se guarda en la base). Reemplazan a "Eatsy" en el kiosco, llamados, tickets, login y paneles. |
 | **Límites** | Máximo de usuarios activos por tipo (ej. 2 kioscos). Vacío = sin límite. |
-| **Módulos** | Prender o apagar cupones, puntos de clientes, seguimiento por QR y estadísticas. |
+| **Módulos** | Prender o apagar cupones, puntos de clientes, seguimiento por QR y estadísticas. Con **cupones** apagados se siguen usando las promociones automáticas (porcentaje y monto fijo por producto), pero no se pueden crear cupones con código y los existentes se deshabilitan. |
 
-Sin configuración guardada, la instalación funciona como siempre (Full, sin vencimiento, marca Eatsy).
+Sin configuración guardada, la instalación funciona como siempre (Full, sin vencimiento, marca Eatsy). Al guardar, todas las pantallas abiertas se recargan solas para aplicar los cambios (si alguien tiene un pedido a medio cargar o un formulario abierto, le aparece un aviso con **Recargar** en lugar de recargarse de golpe).
 
 **Respaldo**: el botón **Descargar respaldo** baja la base completa (estructura + datos) en un archivo `.sql`. Para restaurarlo, en una base vacía: `mysql -u usuario -p nombre_base < respaldo.sql`.
 

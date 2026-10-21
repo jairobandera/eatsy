@@ -13,8 +13,9 @@ import {
   obtenerConfig,
   paletaMarca,
   rolesHabilitados,
-  versionConfig,
+  versionLogo,
 } from '../services/config.service.js';
+import { deshabilitarCupones } from '../services/admin.services.js';
 import { generarRespaldo, nombreRespaldo } from '../services/respaldo.service.js';
 import { guardarInstalaciones, panelInstalaciones } from '../services/instalaciones.service.js';
 import { invalidarPaginas } from '../utils/assets.js';
@@ -29,7 +30,7 @@ export function negocioPublico(req, res) {
   const base = {
     nombre: cfg.negocio.nombre,
     color: paletaMarca(cfg.negocio.color),
-    logo_url: `/negocio/logo?v=${versionConfig()}`,
+    logo_url: `/negocio/logo?v=${versionLogo()}`,
     paquete: cfg.paquete.tipo,
     roles: rolesHabilitados(cfg),
     modulos: cfg.modulos,
@@ -41,12 +42,14 @@ export function negocioPublico(req, res) {
 }
 
 /** Logo del negocio (guardado como data URL en la configuración) o el de Eatsy. */
-export function logoNegocio(_req, res) {
+export function logoNegocio(req, res) {
   const logo = obtenerConfig().negocio.logo;
   const m = /^data:(image\/(?:png|jpeg|webp|gif));base64,(.+)$/.exec(logo || '');
-  res.set('Cache-Control', 'public, max-age=86400');
-  if (!m) return res.sendFile(path.join(config.paths.public, 'img', 'logo.png'));
-  res.type(m[1]).send(Buffer.from(m[2], 'base64'));
+  // Con la versión vigente (?v=<hash del logo>) se cachea para siempre; sin versión o con una vieja,
+  // el navegador revalida cada vez (ETag), así nunca muestra un logo anterior.
+  const cache = req.query.v === versionLogo() ? 'public, max-age=31536000, immutable' : 'no-cache';
+  if (!m) return res.sendFile(path.join(config.paths.public, 'img', 'logo.png'), { cacheControl: false, headers: { 'Cache-Control': cache } });
+  res.set('Cache-Control', cache).type(m[1]).send(Buffer.from(m[2], 'base64'));
 }
 
 // ───────────── API del superadmin ─────────────
@@ -65,7 +68,7 @@ async function resumen() {
 
 const despuesDeGuardar = () => {
   invalidarPaginas();
-  publish('config:actualizada', { staff: {}, kiosco: {}, publico: {}, mozo: {} });
+  publish('config:actualizada', { todos: {} });
 };
 
 export const superadminController = {
@@ -108,8 +111,11 @@ export const superadminController = {
       limites: Object.fromEntries(ROLES_LIMITABLES.map((r) => [r, limites[r] ?? null])),
       modulos,
     });
+    // Sin el módulo de cupones, los cupones existentes quedan deshabilitados (el admin los rehabilita
+    // desde "Deshabilitados" si se vuelve a prender).
+    const cuponesDeshabilitados = modulos.cupones === false ? await deshabilitarCupones() : 0;
     despuesDeGuardar();
-    res.json(await resumen());
+    res.json({ ...(await resumen()), cupones_deshabilitados: cuponesDeshabilitados });
   },
 
   subirLogo: async (req, res) => {

@@ -104,8 +104,6 @@ rt.on('pedido:actualizado', (p) => {
   aplicar(p);
   render();
 });
-// Si el superadmin cambia la marca o los módulos, la pantalla pública se recarga sola.
-rt.on('config:actualizada', () => setTimeout(() => location.reload(), 1500));
 rt.onReconnect(load);
 
 // Reloj

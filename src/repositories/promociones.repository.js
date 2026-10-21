@@ -57,6 +57,12 @@ export const promocionesRepo = {
     return Boolean(await sql.get('SELECT 1 AS x FROM promociones WHERE codigo = ? AND activo = 1 AND id <> ? LIMIT 1', [codigo, excludeId]));
   },
 
+  /** Deshabilita todos los cupones (promociones con código). Devuelve cuántos. */
+  async deshabilitarConCodigo() {
+    const r = await sql.run('UPDATE promociones SET activo = 0, updated_at = ? WHERE activo = 1 AND codigo IS NOT NULL', [now()]);
+    return r.affectedRows;
+  },
+
   /** Deshabilita las promociones cuya fecha de fin ya pasó. */
   async deactivateExpired(hoy) {
     const result = await sql.run(

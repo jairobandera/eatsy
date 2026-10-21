@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import config from '../config/index.js';
-import { obtenerConfig, paletaMarca, versionConfig } from '../services/config.service.js';
+import { obtenerConfig, paletaMarca, versionLogo } from '../services/config.service.js';
 
 /**
  * "Cache busting" de JS y CSS: cada página pide sus archivos con ?v=<hash del contenido>.
@@ -61,7 +61,7 @@ function conMarca(html) {
   const meta = `<meta name="negocio" content="${escapar(negocio.nombre)}">`;
   return html
     .replace(/Eatsy/g, escapar(negocio.nombre))
-    .replaceAll('/img/logo.png', `/negocio/logo?v=${versionConfig()}`)
+    .replaceAll('/img/logo.png', `/negocio/logo?v=${versionLogo()}`)
     .replace(/<meta name="theme-color" content="[^"]*">/, `<meta name="theme-color" content="${p.brand}">`)
     .replace('</head>', `  ${meta}\n  ${estilo}\n</head>`);
 }

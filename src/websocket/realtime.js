@@ -60,6 +60,8 @@ function audienceOf(client) {
 export function publish(type, payloads) {
   if (!wss) return;
   wss.broadcast((client) => {
+    // `todos`: aviso general para cualquier pantalla (ej. cambió la configuración), sin datos sensibles.
+    if (payloads.todos !== undefined) return { type, data: payloads.todos };
     const audience = audienceOf(client);
     const data = payloads[audience];
     if (data === undefined) return null;
