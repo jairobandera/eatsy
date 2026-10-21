@@ -16,11 +16,15 @@ export const DIAS_AVISO_VENCIMIENTO = 7;
 
 export const DEFAULTS = Object.freeze({
   paquete: { tipo: 'full', cocina: true },
-  licencia: { vence: null, suspendida: false, motivo: '' },
+  // tipo 'pago' (con fecha de vencimiento) o 'gratis' (sin vencimiento hasta que el superadmin la cambie).
+  licencia: { tipo: 'pago', vence: null, suspendida: false, motivo: '' },
   negocio: { nombre: 'Eatsy', color: '#ff5722', logo: null },
   limites: { Administrador: null, Cajero: null, Cocina: null, Mozo: null, Cliente: null },
   modulos: { cupones: true, puntos: true, seguimiento: true, estadisticas: true },
+  // Otras instalaciones (de otros negocios) que este superadmin ve en su panel central.
+  instalaciones: { lista: [] },
 });
+export const TIPOS_LICENCIA = ['pago', 'gratis'];
 
 let actual = structuredClone(DEFAULTS);
 let version = 0;
@@ -81,16 +85,18 @@ export const esTotem = (cfg = actual) => cfg.paquete.tipo === 'totem';
 const diasEntre = (a, b) => Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86_400_000);
 
 /**
- * Estado de la licencia: 'ok' | 'por_vencer' (faltan ≤ 7 días) | 'vencida' | 'suspendida'.
+ * Estado de la licencia: 'gratis' | 'ok' | 'por_vencer' (faltan ≤ 7 días) | 'vencida' | 'suspendida'.
  * El día del vencimiento todavía se puede usar; se corta al día siguiente.
+ * Una licencia gratuita no vence nunca (hasta que el superadmin la pase a pago o la suspenda).
  */
 export function estadoLicencia(cfg = actual, hoy = today()) {
-  const { vence, suspendida } = cfg.licencia;
-  if (suspendida) return { estado: 'suspendida', vence, dias: null };
-  if (!vence) return { estado: 'ok', vence: null, dias: null };
+  const { vence, suspendida, tipo } = cfg.licencia;
+  if (suspendida) return { estado: 'suspendida', tipo, vence, dias: null };
+  if (tipo === 'gratis') return { estado: 'gratis', tipo, vence: null, dias: null };
+  if (!vence) return { estado: 'ok', tipo, vence: null, dias: null };
   const dias = diasEntre(hoy, vence);
-  if (dias < 0) return { estado: 'vencida', vence, dias };
-  return { estado: dias <= DIAS_AVISO_VENCIMIENTO ? 'por_vencer' : 'ok', vence, dias };
+  if (dias < 0) return { estado: 'vencida', tipo, vence, dias };
+  return { estado: dias <= DIAS_AVISO_VENCIMIENTO ? 'por_vencer' : 'ok', tipo, vence, dias };
 }
 
 export const licenciaBloqueada = (cfg = actual, hoy = today()) => ['vencida', 'suspendida'].includes(estadoLicencia(cfg, hoy).estado);

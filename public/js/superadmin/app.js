@@ -1,6 +1,6 @@
 import { api } from '../core/api.js';
 import { mountLayout } from '../core/layout.js';
-import { escapeHtml, html, showError, toast, withLoading } from '../core/ui.js';
+import { escapeHtml, html, money, raw, showError, toast, withLoading } from '../core/ui.js';
 
 /**
  * Panel del superadmin (solo el proveedor de la app): paquete, licencia, marca, límites y módulos
@@ -23,6 +23,7 @@ const MODULOS = [
   ['estadisticas', 'Estadísticas', 'Ventas, productos más vendidos y reporte en PDF para el administrador.'],
 ];
 const ESTADO_LICENCIA = {
+  gratis: ['text-success', 'Gratuita (sin vencimiento)'],
   ok: ['text-success', 'Activa'],
   por_vencer: ['text-warning', 'Por vencer'],
   vencida: ['text-danger', 'Vencida: el negocio no puede usar la app'],
@@ -30,6 +31,7 @@ const ESTADO_LICENCIA = {
 };
 
 let datos = null;
+let pestana = 'config';
 
 function render() {
   const { config: c, usuarios, licencia } = datos;
@@ -40,10 +42,20 @@ function render() {
         <h1 class="page-title h3 mb-0"><i class="bi bi-shield-lock text-brand me-2"></i>Configuración de la instalación</h1>
         <p class="text-muted small mb-0">Solo vos ves esta pantalla. Los cambios aplican al instante en todas las pantallas del negocio.</p>
       </div>
-      <a class="btn btn-outline-secondary rounded-pill" href="/admin"><i class="bi bi-box-arrow-up-right me-1"></i>Ir al panel del negocio</a>
+      <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-outline-primary rounded-pill" href="/api/superadmin/respaldo" download title="Base completa en un archivo .sql"><i class="bi bi-database-down me-1"></i>Descargar respaldo</a>
+        <a class="btn btn-outline-secondary rounded-pill" href="/admin"><i class="bi bi-box-arrow-up-right me-1"></i>Ir al panel del negocio</a>
+      </div>
     </div>
 
-    <form id="form" novalidate>
+    <ul class="nav nav-pills mb-3" id="tabs">
+      <li class="nav-item"><button type="button" class="nav-link ${pestana === 'config' ? 'active' : ''}" data-tab="config"><i class="bi bi-sliders me-1"></i>Esta instalación</button></li>
+      <li class="nav-item"><button type="button" class="nav-link ${pestana === 'instalaciones' ? 'active' : ''}" data-tab="instalaciones"><i class="bi bi-buildings me-1"></i>Todas mis instalaciones</button></li>
+    </ul>
+
+    <div id="pane-instalaciones" ${pestana === 'instalaciones' ? '' : 'hidden'}></div>
+
+    <form id="form" novalidate ${pestana === 'config' ? '' : 'hidden'}>
       <div class="row g-3">
         <div class="col-lg-6">
           <section class="card-app sa-card h-100">
@@ -72,9 +84,18 @@ function render() {
           <section class="card-app sa-card h-100">
             <h2><i class="bi bi-calendar-check"></i>Licencia</h2>
             <p class="mb-3">Estado: <span class="licencia-estado ${cls}">${texto}</span>${licencia.vence ? html` · vence el <b>${licencia.vence.split('-').reverse().join('/')}</b>` : ''}</p>
-            <label class="form-label fw-medium" for="l-vence">Pago hasta</label>
-            <input type="date" class="form-control mb-1" id="l-vence" value="${c.licencia.vence || ''}">
-            <div class="form-text mb-3">Vacío = sin vencimiento. 7 días antes se le avisa al administrador; al día siguiente del vencimiento se bloquea.</div>
+            <div class="btn-group w-100 mb-3" role="group" aria-label="Tipo de licencia">
+              <input type="radio" class="btn-check" name="l-tipo" id="l-pago" value="pago" ${c.licencia.tipo !== 'gratis' ? 'checked' : ''}>
+              <label class="btn btn-outline-brand" for="l-pago"><i class="bi bi-credit-card me-1"></i>De pago</label>
+              <input type="radio" class="btn-check" name="l-tipo" id="l-gratis" value="gratis" ${c.licencia.tipo === 'gratis' ? 'checked' : ''}>
+              <label class="btn btn-outline-brand" for="l-gratis"><i class="bi bi-gift me-1"></i>Gratuita</label>
+            </div>
+            <div id="vence-wrap">
+              <label class="form-label fw-medium" for="l-vence">Pago hasta</label>
+              <input type="date" class="form-control mb-1" id="l-vence" value="${c.licencia.vence || ''}">
+              <div class="form-text mb-3">Vacío = sin vencimiento. 7 días antes se le avisa al administrador; al día siguiente del vencimiento se bloquea.</div>
+            </div>
+            <div class="form-text mb-3" id="gratis-texto">Sin vencimiento: funciona hasta que la pases a <b>De pago</b> o la suspendas.</div>
             <div class="form-check form-switch mb-2">
               <input class="form-check-input" type="checkbox" role="switch" id="l-suspendida" ${c.licencia.suspendida ? 'checked' : ''}>
               <label class="form-check-label fw-medium" for="l-suspendida">Suspender el servicio ahora</label>
@@ -154,9 +175,26 @@ function render() {
       .map((c) => `<span style="background:${c}"></span>`)
       .join('');
   };
+  const actualizarLicencia = () => {
+    const gratis = form.querySelector('#l-gratis').checked;
+    form.querySelector('#vence-wrap').hidden = gratis;
+    form.querySelector('#gratis-texto').hidden = !gratis;
+  };
   form.addEventListener('change', (e) => {
     if (['p-full', 'p-totem', 'p-cocina'].includes(e.target.id)) actualizarPaquete();
+    if (e.target.name === 'l-tipo') actualizarLicencia();
   });
+  app.querySelector('#tabs').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-tab]');
+    if (!b) return;
+    pestana = b.dataset.tab;
+    app.querySelectorAll('#tabs .nav-link').forEach((x) => x.classList.toggle('active', x === b));
+    form.hidden = pestana !== 'config';
+    app.querySelector('#pane-instalaciones').hidden = pestana !== 'instalaciones';
+    if (pestana === 'instalaciones') cargarInstalaciones();
+  });
+  if (pestana === 'instalaciones') cargarInstalaciones();
+  actualizarLicencia();
   form.querySelector('#n-color').addEventListener('input', actualizarColor);
   form.querySelector('#n-logo').addEventListener('change', subirLogo);
   form.querySelector('#quitar-logo')?.addEventListener('click', quitarLogo);
@@ -170,7 +208,7 @@ function leer() {
   const num = (id) => (f.querySelector(id).value === '' ? null : Number(f.querySelector(id).value));
   return {
     paquete: { tipo: f.querySelector('[name=tipo]:checked').value, cocina: f.querySelector('#p-cocina').checked },
-    licencia: { vence: f.querySelector('#l-vence').value || null, suspendida: f.querySelector('#l-suspendida').checked, motivo: f.querySelector('#l-motivo').value.trim() },
+    licencia: { tipo: f.querySelector('[name=l-tipo]:checked').value, vence: f.querySelector('#l-vence').value || null, suspendida: f.querySelector('#l-suspendida').checked, motivo: f.querySelector('#l-motivo').value.trim() },
     negocio: { nombre: f.querySelector('#n-nombre').value.trim(), color: f.querySelector('#n-color').value },
     limites: Object.fromEntries(ROLES.map(([rol]) => [rol, num(`#lim-${rol}`)])),
     modulos: Object.fromEntries(MODULOS.map(([m]) => [m, f.querySelector(`#m-${m}`).checked])),
@@ -214,6 +252,127 @@ async function quitarLogo() {
   } catch (err) {
     showError(err);
   }
+}
+
+// ───────────── Todas mis instalaciones (panel central) ─────────────
+let panel = null;
+let editando = false;
+
+const tarjetaLicencia = (lic) => {
+  const [cls, texto] = ESTADO_LICENCIA[lic.estado] || ESTADO_LICENCIA.ok;
+  const vence = lic.vence ? ` · vence ${lic.vence.split('-').reverse().join('/')}` : '';
+  return html`<span class="${cls} fw-semibold">${texto.split(':')[0]}</span><span class="text-muted">${vence}</span>`;
+};
+
+function filaInstalacion(i) {
+  const e = i.estado;
+  if (!i.ok) {
+    return html`<tr class="table-light">
+      <td><div class="fw-semibold">${i.nombre || i.url}</div><a class="small text-muted" href="${i.url}" target="_blank" rel="noopener">${i.url}</a></td>
+      <td colspan="5" class="text-danger small"><i class="bi bi-wifi-off me-1"></i>${i.error}</td>
+      <td class="text-end"><a class="btn btn-sm btn-outline-secondary rounded-pill" href="${i.url}/login" target="_blank" rel="noopener">Abrir</a></td>
+    </tr>`;
+  }
+  const usuarios = Object.entries(e.usuarios || {}).map(([rol, n]) => `${n} ${rol === 'Cliente' ? 'kiosco' : rol.toLowerCase()}`).join(' · ');
+  return html`<tr>
+    <td><div class="fw-semibold">${e.nombre}${i.propia ? html` <span class="badge text-bg-light border">esta</span>` : ''}</div><a class="small text-muted" href="${i.url}" target="_blank" rel="noopener">${i.url}</a></td>
+    <td><span class="badge rounded-pill ${e.paquete.tipo === 'totem' ? 'text-bg-info' : 'text-bg-dark'}">${e.paquete.tipo === 'totem' ? `Tótem${e.paquete.cocina ? ' + cocina' : ''}` : 'Full'}</span></td>
+    <td class="small">${tarjetaLicencia(e.licencia)}</td>
+    <td class="small text-nowrap">${e.hoy.pedidos} pedidos<div class="text-muted">${money(e.hoy.ventas)}</div></td>
+    <td class="small text-nowrap">${e.mes.pedidos} pedidos<div class="text-muted">${money(e.mes.ventas)}</div></td>
+    <td class="small">${usuarios || '—'}<div class="text-muted">Último pedido: ${e.ultimo_pedido ? e.ultimo_pedido.slice(0, 16) : '—'}${e.version ? ` · v${e.version}` : ''}</div></td>
+    <td class="text-end text-nowrap"><a class="btn btn-sm btn-outline-primary rounded-pill" href="${i.propia ? '/superadmin' : `${i.url}/login`}" ${i.propia ? '' : raw('target="_blank" rel="noopener"')}>${i.propia ? 'Estás acá' : 'Administrar'}</a></td>
+  </tr>`;
+}
+
+function renderInstalaciones() {
+  const pane = app.querySelector('#pane-instalaciones');
+  if (!panel) {
+    pane.innerHTML = '<div class="card-app p-5 text-center"><div class="spinner-border text-secondary"></div><div class="small text-muted mt-2">Consultando tus instalaciones (si alguna estaba dormida puede tardar hasta 30 s)…</div></div>';
+    return;
+  }
+  const todas = [panel.esta, ...panel.instalaciones];
+  const caidas = panel.instalaciones.filter((i) => !i.ok).length;
+  pane.innerHTML = html`
+    ${panel.clave_configurada
+      ? ''
+      : html`<div class="alert alert-warning small"><i class="bi bi-key me-1"></i>Para ver las demás instalaciones definí la misma <b>SUPERADMIN_API_KEY</b> (24 caracteres o más) en todas, en Render → Environment.</div>`}
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+      <div class="small text-muted">${todas.length} instalación${todas.length === 1 ? '' : 'es'}${caidas ? html` · <span class="text-danger">${caidas} sin respuesta</span>` : ''}</div>
+      <div class="d-flex gap-2">
+        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill" id="inst-recargar"><i class="bi bi-arrow-clockwise me-1"></i>Actualizar</button>
+        <button type="button" class="btn btn-sm btn-brand rounded-pill" id="inst-editar"><i class="bi bi-pencil me-1"></i>${editando ? 'Cerrar' : 'Agregar / quitar'}</button>
+      </div>
+    </div>
+    ${editando ? editorInstalaciones() : ''}
+    <div class="table-wrap"><div class="table-responsive"><table class="table table-app align-middle mb-0">
+      <thead><tr><th>Negocio</th><th>Paquete</th><th>Licencia</th><th>Hoy</th><th>Este mes</th><th>Usuarios</th><th></th></tr></thead>
+      <tbody>${todas.map(filaInstalacion)}</tbody>
+    </table></div></div>`.toString();
+
+  pane.querySelector('#inst-recargar').onclick = () => cargarInstalaciones({ forzar: true });
+  pane.querySelector('#inst-editar').onclick = () => {
+    editando = !editando;
+    renderInstalaciones();
+  };
+  pane.querySelector('#inst-form')?.addEventListener('submit', guardarInstalaciones);
+  pane.querySelector('#inst-form')?.addEventListener('click', (e) => {
+    const quitar = e.target.closest('[data-quitar]');
+    if (quitar) quitar.closest('.inst-item').remove();
+    if (e.target.closest('#inst-agregar')) {
+      e.target.closest('form').querySelector('#inst-items').insertAdjacentHTML('beforeend', itemEditor({ nombre: '', url: '' }));
+    }
+  });
+}
+
+const itemEditor = (i) => html`<div class="row g-2 mb-2 inst-item">
+    <div class="col-md-4"><input class="form-control form-control-sm" name="nombre" maxlength="60" placeholder="Nombre (opcional)" value="${i.nombre}"></div>
+    <div class="col-md"><input class="form-control form-control-sm" name="url" type="url" required placeholder="https://eatsy-negocio.onrender.com" value="${i.url}"></div>
+    <div class="col-md-auto"><button type="button" class="btn btn-sm btn-outline-danger rounded-pill w-100" data-quitar aria-label="Quitar"><i class="bi bi-trash"></i></button></div>
+  </div>`;
+
+function editorInstalaciones() {
+  return html`<form class="card-app p-3 mb-3" id="inst-form" novalidate>
+    <div class="small text-muted mb-2">Direcciones de tus otras instalaciones (la de este negocio ya está incluida). Cada una tiene que tener la misma <b>SUPERADMIN_API_KEY</b>.</div>
+    <div id="inst-items">${(panel.instalaciones || []).map((i) => itemEditor(i))}</div>
+    <div class="d-flex justify-content-between">
+      <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill" id="inst-agregar"><i class="bi bi-plus-lg me-1"></i>Agregar instalación</button>
+      <button type="submit" class="btn btn-sm btn-brand rounded-pill px-4" data-loading-text="Guardando..."><i class="bi bi-save me-1"></i>Guardar lista</button>
+    </div>
+  </form>`;
+}
+
+async function cargarInstalaciones({ forzar = false } = {}) {
+  if (panel && !forzar) return renderInstalaciones();
+  panel = null;
+  renderInstalaciones();
+  try {
+    panel = await api.get('/superadmin/instalaciones');
+    renderInstalaciones();
+  } catch (err) {
+    app.querySelector('#pane-instalaciones').innerHTML = `<div class="text-danger">${escapeHtml(err.message)}</div>`;
+  }
+}
+
+async function guardarInstalaciones(e) {
+  e.preventDefault();
+  const form = e.target;
+  const lista = [...form.querySelectorAll('.inst-item')]
+    .map((row) => ({ nombre: row.querySelector('[name=nombre]').value.trim(), url: row.querySelector('[name=url]').value.trim() }))
+    .filter((i) => i.url);
+  await withLoading(form.querySelector('[type=submit]'), async () => {
+    try {
+      panel = null;
+      renderInstalaciones();
+      panel = await api.put('/superadmin/instalaciones', { lista });
+      editando = false;
+      toast('Lista de instalaciones guardada');
+      renderInstalaciones();
+    } catch (err) {
+      showError(err, 'No se pudo guardar');
+      cargarInstalaciones({ forzar: true });
+    }
+  });
 }
 
 try {

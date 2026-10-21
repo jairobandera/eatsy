@@ -18,8 +18,8 @@ const bool = (v) => ['1', 'true', 'si', 'sí', 'yes'].includes(String(v ?? '').t
 if (isProduction && (!env.SESSION_SECRET || env.SESSION_SECRET.length < 32)) {
   throw new Error('En producción SESSION_SECRET debe tener al menos 32 caracteres.');
 }
-if (isProduction && env.SUPERADMIN_PASSWORD && env.SUPERADMIN_PASSWORD.length < 12) {
-  throw new Error('En producción SUPERADMIN_PASSWORD debe tener al menos 12 caracteres.');
+if (env.SUPERADMIN_PASSWORD && env.SUPERADMIN_PASSWORD.length < 6) {
+  throw new Error('SUPERADMIN_PASSWORD debe tener al menos 6 caracteres.');
 }
 
 /**
@@ -87,6 +87,10 @@ const config = Object.freeze({
   kioscoPin: env.KIOSCO_PIN || '4500',
   // Superadmin oculto (solo el proveedor de la app): no se guarda en la base. Sin estas variables no existe.
   superadmin: env.SUPERADMIN_USER && env.SUPERADMIN_PASSWORD ? { user: env.SUPERADMIN_USER.trim(), password: env.SUPERADMIN_PASSWORD } : null,
+  // Clave compartida entre todas tus instalaciones para el panel central (vacía = no se puede consultar desde otra).
+  superadminApiKey: env.SUPERADMIN_API_KEY && env.SUPERADMIN_API_KEY.length >= 24 ? env.SUPERADMIN_API_KEY : null,
+  // Versión desplegada (Render la pone sola) para verla en el panel central.
+  version: (env.RENDER_GIT_COMMIT || '').slice(0, 7) || null,
   productPlaceholder: env.PRODUCT_PLACEHOLDER || '/img/placeholder-producto.svg',
   paths: {
     public: path.join(ROOT_DIR, 'public'),
