@@ -31,6 +31,7 @@ const ESTADO_LICENCIA = {
 };
 
 let datos = null;
+const COLOR_EATSY = '#ff5722'; // color por defecto de la marca
 let pestana = 'config';
 
 function render() {
@@ -113,6 +114,7 @@ function render() {
             <div class="d-flex align-items-center gap-2 mb-3">
               <input type="color" class="form-control form-control-color" id="n-color" value="${c.negocio.color}">
               <div class="color-preview" id="color-preview"></div>
+              <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill ms-auto" id="color-defecto" title="Volver al naranja de Eatsy (${COLOR_EATSY})"><i class="bi bi-arrow-counterclockwise me-1"></i>Color de Eatsy</button>
             </div>
             <label class="form-label fw-medium">Logo</label>
             <div class="d-flex align-items-center gap-3">
@@ -196,6 +198,11 @@ function render() {
   if (pestana === 'instalaciones') cargarInstalaciones();
   actualizarLicencia();
   form.querySelector('#n-color').addEventListener('input', actualizarColor);
+  form.querySelector('#color-defecto').addEventListener('click', () => {
+    form.querySelector('#n-color').value = COLOR_EATSY;
+    actualizarColor();
+    toast('Color de Eatsy elegido: tocá Guardar cambios para aplicarlo', 'info', { timer: 3500 });
+  });
   form.querySelector('#n-logo').addEventListener('change', subirLogo);
   form.querySelector('#quitar-logo')?.addEventListener('click', quitarLogo);
   form.addEventListener('submit', guardar);

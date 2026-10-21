@@ -1,6 +1,9 @@
 import { api } from '../core/api.js';
-import { debounce, formatDate, html, money, renderPagination, showError, toast, todayYmd, withLoading } from '../core/ui.js';
+import { debounce, formatDate, getNegocio, html, moduloActivo, money, renderPagination, showError, toast, todayYmd, withLoading } from '../core/ui.js';
 import { createCrudPage, value } from './crud-page.js';
+
+// Si el superadmin apagó los cupones, las promociones siguen (descuentos automáticos) pero sin código.
+const cuponesActivos = moduloActivo(await getNegocio(), 'cupones');
 
 const descuentoLabel = (p) =>
   p.tipo_descuento === 'monto' ? `${money(p.descuento)} ${p.codigo ? 'al total' : 'c/u'}` : `${Number(p.descuento)} %`;
@@ -41,12 +44,18 @@ function form(p) {
           </div>
           <div class="col-12"><div class="form-text" id="desc-help"></div></div>
         </div>
-        <div class="mb-3">
-          <label class="form-label fw-medium" for="f-codigo">Código de cupón (opcional)</label>
-          <input class="form-control text-uppercase" id="f-codigo" name="codigo" maxlength="30" pattern="[A-Za-z0-9]{3,30}" value="${p?.codigo || ''}" autocomplete="off">
-          <div class="invalid-feedback">Entre 3 y 30 letras o números, sin espacios.</div>
-          <div class="form-text" id="codigo-help"></div>
-        </div>
+        ${cuponesActivos
+          ? html`<div class="mb-3">
+              <label class="form-label fw-medium" for="f-codigo">Código de cupón (opcional)</label>
+              <input class="form-control text-uppercase" id="f-codigo" name="codigo" maxlength="30" pattern="[A-Za-z0-9]{3,30}" value="${p?.codigo || ''}" autocomplete="off">
+              <div class="invalid-feedback">Entre 3 y 30 letras o números, sin espacios.</div>
+              <div class="form-text" id="codigo-help"></div>
+            </div>`
+          : html`<input type="hidden" id="f-codigo" name="codigo" value="${p?.codigo || ''}">
+            <div class="alert alert-light border small py-2 mb-3"><i class="bi bi-info-circle me-1"></i>Los <b>cupones con código</b> no están incluidos en el paquete contratado.
+              ${p?.codigo
+                ? html`Esta promoción es un cupón (código <b>${p.codigo}</b>): mientras los cupones estén desactivados no se aplica.`
+                : 'Las promociones se aplican solas en el kiosco y la caja.'}<span id="codigo-help" hidden></span></div>`}
         <div class="row g-2">
           <div class="col-6">
             <label class="form-label fw-medium" for="f-ini">Desde</label>
@@ -88,7 +97,7 @@ function onOpen(f) {
   const codigo = f.querySelector('#f-codigo');
   const updateHelp = () => {
     const pct = tipo.value === 'porcentaje';
-    const conCodigo = !pct && codigo.value.trim();
+    const conCodigo = cuponesActivos && !pct && codigo.value.trim();
     desc.max = pct ? '100' : '';
     f.querySelector('#desc-help').textContent = pct
       ? 'Porcentaje de descuento sobre el precio (0 a 100). Se aplica solo.'
@@ -216,7 +225,13 @@ createCrudPage({
   modalSize: 'modal-xl',
   fetchFull: true,
   columns: [
-    { label: 'Nombre', render: (p) => html`<span class="fw-medium">${p.nombre}</span>${p.codigo ? html`<div class="small"><span class="badge text-bg-dark"><i class="bi bi-ticket-perforated me-1"></i>Cupón ${p.codigo}</span></div>` : ''}` },
+    {
+      label: 'Nombre',
+      render: (p) =>
+        html`<span class="fw-medium">${p.nombre}</span>${p.codigo
+          ? html`<div class="small"><span class="badge ${cuponesActivos ? 'text-bg-dark' : 'text-bg-secondary'}" title="${cuponesActivos ? '' : 'Los cupones están desactivados en el paquete'}"><i class="bi bi-ticket-perforated me-1"></i>Cupón ${p.codigo}${cuponesActivos ? '' : ' (desactivado)'}</span></div>`
+          : ''}`,
+    },
     { label: 'Descuento', class: 'text-nowrap', render: (p) => html`<span class="badge rounded-pill bg-brand fs-6">${descuentoLabel(p)}</span>` },
     { label: 'Vigencia', render: vigencia },
     { label: 'Productos', class: 'd-none d-md-table-cell', render: (p) => `${p.productos_count ?? 0}` },
