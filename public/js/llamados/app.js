@@ -1,7 +1,7 @@
 import { api } from '../core/api.js';
 import { createRealtime } from '../core/realtime.js';
 import { play } from '../core/sound.js';
-import { html } from '../core/ui.js';
+import { getNegocio, html, moduloActivo } from '../core/ui.js';
 
 /**
  * Pantalla pública (monitor del local). No requiere sesión: el servidor
@@ -117,14 +117,20 @@ setInterval(tick, 10_000);
 // Pista para habilitar el sonido (los navegadores lo bloquean hasta que alguien toca la pantalla)
 document.addEventListener('click', () => document.getElementById('sound-hint').remove(), { once: true });
 
-// QR para que los clientes sigan su pedido desde el celular.
+// QR para que los clientes sigan su pedido desde el celular (solo si el módulo de seguimiento está activo).
 async function cargarQr() {
+  const card = document.getElementById('qr-card');
+  if (!moduloActivo(await getNegocio(), 'seguimiento')) {
+    card.hidden = true;
+    return;
+  }
   try {
     const { url, svg } = await api.get('/publico/seguimiento-qr');
     document.getElementById('qr-img').innerHTML = svg; // SVG generado por el servidor
     document.getElementById('qr-url').textContent = url;
     document.getElementById('qr-card').hidden = false;
   } catch (err) {
+    card.hidden = true;
     console.error('No se pudo cargar el QR', err);
   }
 }

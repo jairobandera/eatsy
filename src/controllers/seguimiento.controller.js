@@ -40,5 +40,7 @@ export async function qrSeguimiento(_req, res) {
     const svg = await QRCode.toString(url, { type: 'svg', margin: 1, errorCorrectionLevel: 'M', color: { dark: '#14171a', light: '#ffffff' } });
     qrCache = { url, svg };
   }
-  res.set('Cache-Control', 'public, max-age=300').json(qrCache);
+  // Sin caché en el navegador: si el superadmin apaga el seguimiento, el QR tiene que desaparecer ya
+  // (el SVG igual queda memorizado acá, así que generarlo no cuesta nada).
+  res.set('Cache-Control', 'no-store').json(qrCache);
 }
