@@ -76,7 +76,7 @@ await createCrudPage({
   },
 });
 
-// ───────────── QR del mozo ─────────────
+// QR del mozo
 document.body.insertAdjacentHTML(
   'beforeend',
   `<div class="modal fade" id="modal-qr" tabindex="-1" aria-hidden="true">

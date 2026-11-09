@@ -55,7 +55,7 @@ export async function seedBase() {
 /**
  * Modo producción: todas las tablas vacías y solo el usuario administrador.
  * La contraseña sale de ADMIN_PASSWORD; si no está definida se genera una al azar
- * y se muestra UNA vez en la consola (cambiala después desde Admin → Usuarios).
+ * y se muestra UNA vez en la consola (cambiala después desde Admin -> Usuarios).
  */
 export async function seedProduccion() {
   let password = config.admin.password;

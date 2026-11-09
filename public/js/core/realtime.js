@@ -5,12 +5,9 @@
  *   rt.on('pedido:creado', (pedido) => ...);
  *   rt.onReconnect(() => recargarDatos());   // por si se perdieron eventos
  */
-// ───────────── Cambios de configuración (superadmin) ─────────────
-// Cuando el superadmin guarda cambios (marca, paquete, módulos...), las pantallas NO se recargan
-// solas (alguien puede estar cobrando o cargando un pedido): aparece un cartel con "Actualizar" y
-// "Más tarde". Con "Más tarde" los cambios se aplican la próxima vez que se recargue (F5) o se
-// cambie de pantalla. Solo las pantallas sin nadie operándolas (el monitor de llamados) se
-// recargan solas.
+// Cambios de configuración del superadmin.
+// No recargamos solos porque alguien puede estar cobrando: mostramos un cartel para actualizar.
+// La única que se recarga sola es la de llamados, que nadie la usa.
 let modoConfig = 'preguntar'; // 'preguntar' | 'automatico' | 'nunca'
 
 /** El monitor de llamados se recarga solo (nadie trabaja en esa pantalla). */

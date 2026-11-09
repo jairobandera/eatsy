@@ -151,7 +151,7 @@ function upsert(p) {
   else cargarContadores();
 }
 
-// ───────────── Eventos de la tabla ─────────────
+// Eventos de la tabla
 tbody.addEventListener('click', async (e) => {
   const ver = e.target.closest('[data-ver]');
   const cocina = e.target.closest('[data-cocina]');
@@ -189,7 +189,7 @@ tbody.addEventListener('change', async (e) => {
   else sel.value = pedido.pago.estado;
 });
 
-// ───────────── Búsqueda (compatible con lector de código de barras) ─────────────
+// Búsqueda (compatible con lector de código de barras)
 const buscar = (opts) => {
   state.search = search.value.trim();
   state.page = 1;
@@ -214,7 +214,7 @@ app.querySelector('#vista').addEventListener('change', (e) => {
   load();
 });
 
-// ───────────── Mesas de los mozos (liberar cuando los clientes se fueron) ─────────────
+// Mesas de los mozos (liberar cuando los clientes se fueron)
 document.body.insertAdjacentHTML(
   'beforeend',
   `<div class="modal fade" id="modal-mesas" tabindex="-1" aria-hidden="true">
@@ -292,7 +292,7 @@ modalMesasEl.addEventListener('click', async (e) => {
   }
 });
 
-// ───────────── Tiempo real ─────────────
+// Tiempo real
 const rt = createRealtime();
 rt.on('pedido:creado', (p) => {
   play('pedido');

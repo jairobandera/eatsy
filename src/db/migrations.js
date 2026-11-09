@@ -45,7 +45,7 @@ async function indexExists(conn, table, index) {
 export async function runMigrations(conn) {
   // Extras de ingredientes: precio por unidad extra (NULL = no se ofrece como extra).
   if (await addColumn(conn, 'ingredientes', 'precio_extra', 'DECIMAL(10,2) NULL AFTER descripcion')) {
-    // Base existente: cargamos precios de extra sugeridos (se pueden cambiar en Admin → Ingredientes).
+    // Base existente: cargamos precios de extra sugeridos (se pueden cambiar en Admin -> Ingredientes).
     for (const [nombre, precio] of Object.entries(preciosExtra)) {
       await conn.query('UPDATE ingredientes SET precio_extra = ? WHERE nombre = ?', [precio, nombre]);
     }
@@ -73,7 +73,7 @@ export async function runMigrations(conn) {
 
   // Cocina solo recibe lo que se elabora: bebidas, postres, etc. los despacha la caja.
   if (await addColumn(conn, 'categorias', 'va_a_cocina', 'TINYINT(1) NOT NULL DEFAULT 1 AFTER nombre')) {
-    // Base existente: valores sugeridos (se pueden cambiar en Admin → Categorías).
+    // Base existente: valores sugeridos (se pueden cambiar en Admin -> Categorías).
     await conn.query('UPDATE categorias SET va_a_cocina = 0 WHERE nombre IN (?)', [categoriasSinCocina]);
   }
   await addColumn(conn, 'detalle_pedido', 'para_cocina', 'TINYINT(1) NOT NULL DEFAULT 1 AFTER subtotal');
@@ -84,7 +84,7 @@ export async function runMigrations(conn) {
 
   // Extras por producto: el mismo ingrediente puede ofrecerse como extra en un producto y en otro no.
   if (await addColumn(conn, 'ingrediente_producto', 'permite_extra', 'TINYINT(1) NOT NULL DEFAULT 1 AFTER es_obligatorio')) {
-    // Base existente: las empanadas no llevan extras (se puede cambiar en Admin → Productos).
+    // Base existente: las empanadas no llevan extras (se puede cambiar en Admin -> Productos).
     await conn.query(
       `UPDATE ingrediente_producto ip
           JOIN categoria_producto cp ON cp.producto_id = ip.producto_id

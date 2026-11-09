@@ -33,7 +33,7 @@ export function html(strings, ...values) {
 const moneyFmt = new Intl.NumberFormat('es-UY', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 export const money = (n) => `$ ${moneyFmt.format(Number(n) || 0)}`;
 
-/** '2026-10-19 13:42:31' → '19/10 13:42' */
+/** '2026-10-19 13:42:31' -> '19/10 13:42' */
 export function formatDateTime(value, { withYear = false } = {}) {
   if (!value) return '';
   const [d, t = ''] = String(value).split(' ');
@@ -53,7 +53,7 @@ export function todayYmd() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-// ───────────── Marca del negocio ─────────────
+// Marca del negocio
 // El servidor inyecta en cada página el nombre (<meta name="negocio">) y el color (--brand).
 export const nombreNegocio = () => document.querySelector('meta[name="negocio"]')?.content || 'Eatsy';
 export const colorMarca = () => getComputedStyle(document.documentElement).getPropertyValue('--brand').trim() || '#ff5722';
@@ -84,7 +84,7 @@ export const PAGO_CLASES = { Completado: 'text-bg-success', Pendiente: 'text-bg-
 export const estadoBadge = (estado) =>
   html`<span class="badge rounded-pill ${ESTADO_CLASES[estado] || 'text-bg-secondary'}">${ESTADO_LABEL[estado] || estado}</span>`;
 
-// ───────────── Alertas (SweetAlert2) ─────────────
+// Alertas (SweetAlert2)
 const toastMixin = () =>
   Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2500, timerProgressBar: true });
 
@@ -120,7 +120,7 @@ export function showError(err, title = 'Algo salió mal') {
 export const showSuccess = (title, text) =>
   Swal.fire({ icon: 'success', title, text, timer: 1800, showConfirmButton: false });
 
-// ───────────── Varios ─────────────
+// Varios
 export function debounce(fn, ms = 300) {
   let t;
   return (...args) => {

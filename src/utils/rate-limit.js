@@ -1,10 +1,4 @@
-/**
- * Limitador de intentos en memoria (ventana fija). Sirve para frenar fuerza bruta
- * en el login y en la búsqueda pública de pedidos.
- *
- *   const limiter = createRateLimiter({ max: 5, windowMs: 5 * 60_000 });
- *   if (limiter.blocked(key)) ...; limiter.hit(key); limiter.reset(key);
- */
+/** Limita intentos en memoria, para frenar fuerza bruta en el login y en el seguimiento. */
 export function createRateLimiter({ max, windowMs }) {
   const entries = new Map();
 

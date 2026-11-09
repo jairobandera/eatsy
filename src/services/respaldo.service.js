@@ -4,11 +4,8 @@ import { sql } from '../db/connection.js';
 import { now } from '../utils/dates.js';
 
 /**
- * Respaldo completo de la base en un archivo .sql (estructura + datos), sin depender de mysqldump
- * (en Render no está). Se escribe por partes para no cargar toda la base en memoria.
- *
- * Para restaurarlo: crear una base vacía y ejecutar el archivo, por ejemplo
- *   mysql -u usuario -p nombre_base < respaldo.sql
+ * Respaldo de la base en un .sql sin usar mysqldump (en Render no está). Va por partes para no
+ * llenar la memoria. Se restaura con: mysql -u usuario -p nombre_base < respaldo.sql
  */
 const LOTE = 500;
 const ident = (nombre) => `\`${String(nombre).replace(/`/g, '``')}\``;

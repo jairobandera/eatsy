@@ -2,13 +2,11 @@
  * Teclado en pantalla para el kiosco táctil (sin dependencias).
  *
  * Uso: agregar `data-tk` a un <input>. Opcionales:
- *   data-tk="codigo"          → solo letras y números en mayúsculas (sin espacio)
- *   data-tk-enter="Buscar"    → texto de la tecla de confirmación
- *   data-tk-max="30"          → largo máximo
+ *   data-tk="codigo"          -> solo letras y números en mayúsculas (sin espacio)
+ *   data-tk-enter="Buscar"    -> texto de la tecla de confirmación
+ *   data-tk-max="30"          -> largo máximo
  *
- * El input recibe `inputmode="none"` para que no aparezca el teclado del sistema.
- * Cada tecla dispara el evento `input` (así funcionan los listeners existentes) y la
- * tecla de confirmación dispara `keydown` Enter + el evento personalizado `tk:enter`.
+ * Las teclas disparan `input` como si escribieran normal, y la de confirmar dispara Enter y `tk:enter`.
  */
 const ROWS_TEXTO = [
   ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'],

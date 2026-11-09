@@ -20,7 +20,7 @@ const offcanvas = bootstrap.Offcanvas.getOrCreateInstance($('#cart-offcanvas'));
 
 const promoLabel = (p) => (p.promocion.tipo_descuento === 'porcentaje' ? `-${p.promocion.descuento}%` : `-${money(p.promocion.descuento)}`);
 
-// ───────────── Catálogo ─────────────
+// Catálogo
 async function cargarCategorias() {
   const cats = await api.get('/catalogo/categorias');
   $('#categorias').innerHTML =
@@ -84,7 +84,7 @@ const onBuscar = debounce((value) => {
 }, 350);
 ['#buscar', '#buscar-mobile'].forEach((sel) => $(sel).addEventListener('input', (e) => onBuscar(e.target.value)));
 
-// ───────────── Personalizar producto ─────────────
+// Personalizar producto
 const abrirDesde = (e) => {
   const card = e.target.closest('[data-prod]');
   if (card) abrirProducto(state.productos.find((p) => p.id === Number(card.dataset.prod)));
@@ -100,7 +100,7 @@ function abrirProducto(p) {
   const personalizables = p.ingredientes.filter((i) => !i.es_obligatorio || i.precio_extra != null);
   const fijos = p.ingredientes.filter((i) => i.es_obligatorio && i.precio_extra == null);
   const quitados = new Set();
-  const extras = new Map(); // id → cantidad extra
+  const extras = new Map(); // id -> cantidad extra
   let cantidad = 1;
 
   const precioExtras = () => p.ingredientes.reduce((s, i) => s + (extras.get(i.id) || 0) * Number(i.precio_extra || 0), 0);
@@ -210,7 +210,7 @@ function abrirProducto(p) {
   modalProducto.show();
 }
 
-// ───────────── Carrito ─────────────
+// Carrito
 let cuponAbierto = false;
 let cuponDraft = '';
 
@@ -350,7 +350,7 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-// ───────────── Pago ─────────────
+// Pago
 let enviando = false;
 document.querySelectorAll('.pay-option').forEach((btn) =>
   btn.addEventListener('click', async () => {
@@ -421,7 +421,7 @@ $('#btn-imprimir').addEventListener('click', () => {
   if (!imprimirTicket($('#ticket-kiosco').innerHTML)) showError(new Error('El navegador bloqueó la ventana de impresión.'));
 });
 
-// ───────────── Inactividad: si alguien deja el pedido a medias, se limpia ─────────────
+// Inactividad: si alguien deja el pedido a medias, se limpia
 let idleTimer;
 const IDLE_MS = 120_000;
 function resetIdle() {
@@ -450,7 +450,7 @@ function resetIdle() {
 ['pointerdown', 'keydown', 'scroll'].forEach((ev) => document.addEventListener(ev, resetIdle, { passive: true }));
 resetIdle();
 
-// ───────────── Salida del kiosco (requiere PIN del local) ─────────────
+// Salida del kiosco (requiere PIN del local)
 let toques = 0;
 let toquesTimer;
 $('#btn-logo').addEventListener('click', async () => {
@@ -480,7 +480,7 @@ $('#btn-logo').addEventListener('click', async () => {
   }
 });
 
-// ───────────── Tiempo real: el catálogo se actualiza solo ─────────────
+// Tiempo real: el catálogo se actualiza solo
 createRealtime().on(
   'catalogo:actualizado',
   debounce(() => {

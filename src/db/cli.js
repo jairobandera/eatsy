@@ -1,9 +1,9 @@
 /**
  * Utilidades de base de datos (respetan APP_MODE):
- *   npm run db:reset   → borra TODAS las tablas y vuelve a inicializar
+ *   npm run db:reset   -> borra TODAS las tablas y vuelve a inicializar
  *                        (demo: datos de prueba · produccion: vacía, solo el admin)
- *   npm run db:seed    → inicializa solo si la base no tiene usuarios
- *   npm run db:demo    → agrega pedidos de ejemplo de los últimos 14 días (solo en modo demo)
+ *   npm run db:seed    -> inicializa solo si la base no tiene usuarios
+ *   npm run db:demo    -> agrega pedidos de ejemplo de los últimos 14 días (solo en modo demo)
  *
  * En modo producción, `reset` pide confirmación escribiendo: npm run db:reset -- --confirmar
  */

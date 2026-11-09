@@ -3,12 +3,8 @@ import { sql } from '../db/connection.js';
 import { now, today } from '../utils/dates.js';
 
 /**
- * Configuración de la instalación, la maneja solo el superadmin (cada negocio tiene su propia
- * instalación). Se guarda en la tabla `configuracion` (una fila por sección, en JSON) y se
- * mantiene en memoria: se carga al arrancar (`cargarConfig`) y se refresca al guardar.
- *
- * Los valores por defecto reproducen el comportamiento de siempre (paquete Full, sin vencimiento,
- * marca Eatsy, sin límites y todos los módulos), así una instalación existente sigue igual.
+ * Configuración de la instalación (solo la toca el superadmin). Está en la tabla `configuracion`
+ * y la tenemos en memoria. Por defecto queda todo como antes: Full, sin vencimiento y sin límites.
  */
 export const PAQUETES = ['full', 'totem'];
 export const MODULOS = ['cupones', 'puntos', 'seguimiento', 'estadisticas'];
@@ -76,7 +72,7 @@ export async function guardarConfig(secciones) {
   return cargarConfig();
 }
 
-// ───────────── Reglas derivadas ─────────────
+// Reglas derivadas
 
 /** Roles que el paquete permite usar. Tótem: kiosco + administrador (+ cocina si se incluye). */
 export function rolesHabilitados(cfg = actual) {
@@ -108,7 +104,7 @@ export function estadoLicencia(cfg = actual, hoy = today()) {
 
 export const licenciaBloqueada = (cfg = actual, hoy = today()) => ['vencida', 'suspendida'].includes(estadoLicencia(cfg, hoy).estado);
 
-// ───────────── Colores de la marca ─────────────
+// Colores de la marca
 const hex = (n) => Math.round(Math.max(0, Math.min(255, n))).toString(16).padStart(2, '0');
 const rgb = (color) => {
   const m = /^#?([0-9a-f]{6})$/i.exec(String(color || '').trim());

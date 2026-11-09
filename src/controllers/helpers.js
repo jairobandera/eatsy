@@ -1,6 +1,6 @@
 import { pagination, parseId, validate } from '../utils/validator.js';
 
-/** ?estado=activos|inactivos|todos → true|false|undefined */
+/** ?estado=activos|inactivos|todos -> true|false|undefined */
 export function filtroActivo(query) {
   if (query.estado === 'inactivos') return false;
   if (query.estado === 'todos') return undefined;

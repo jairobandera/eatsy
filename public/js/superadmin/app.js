@@ -261,7 +261,7 @@ async function quitarLogo() {
   }
 }
 
-// ───────────── Todas mis instalaciones (panel central) ─────────────
+// Todas mis instalaciones (panel central)
 let panel = null;
 let editando = false;
 

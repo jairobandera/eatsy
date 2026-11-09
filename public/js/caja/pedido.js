@@ -119,7 +119,7 @@ const modalCreado = new bootstrap.Modal(app.querySelector('#modal-creado'));
 
 const state = { page: 1, buscar: '', categoriaId: null, productos: [], carrito: [], cliente: null, cupon: null };
 
-// ───────────── Catálogo ─────────────
+// Catálogo
 async function cargarCategorias() {
   const cats = await api.get('/catalogo/categorias');
   els.categorias.innerHTML =
@@ -174,7 +174,7 @@ app.querySelector('#buscar').addEventListener(
   }),
 );
 
-// ───────────── Modal de producto (ingredientes y cantidad) ─────────────
+// Modal de producto (ingredientes y cantidad)
 els.productos.addEventListener('click', (e) => {
   const b = e.target.closest('[data-prod]');
   if (b) abrirProducto(state.productos.find((p) => p.id === Number(b.dataset.prod)));
@@ -220,7 +220,7 @@ function abrirProducto(p) {
     <div class="modal-footer"><button class="btn btn-brand rounded-pill w-100" id="agregar"><i class="bi bi-cart-plus me-1"></i>Agregar al pedido · <span id="prod-subtotal"></span></button></div>`.toString();
 
   const qty = content.querySelector('#cantidad');
-  const extras = new Map(); // id → cantidad extra
+  const extras = new Map(); // id -> cantidad extra
   const porId = new Map(p.ingredientes.map((i) => [i.id, i]));
   const extrasUnidad = () => [...extras].reduce((s, [id, n]) => s + n * Number(porId.get(id).precio_extra || 0), 0);
 
@@ -270,7 +270,7 @@ function abrirProducto(p) {
   modalProducto.show();
 }
 
-// ───────────── Carrito ─────────────
+// Carrito
 const MAX_EXTRA = 3;
 const keyOf = (item) =>
   `${item.id}:${item.quitados.map((q) => q.id).sort((a, b) => a - b).join(',')}:${[...item.extras]
@@ -312,7 +312,7 @@ function renderCarrito() {
   els.confirmar.disabled = !state.carrito.length;
 }
 
-// ───────────── Cupón (código de descuento de monto fijo) ─────────────
+// Cupón (código de descuento de monto fijo)
 const subtotalPedido = () => state.carrito.reduce((s, it) => s + it.precio * it.cantidad, 0);
 function descuentoCupon() {
   if (!state.cupon) return 0;
@@ -401,7 +401,7 @@ app.querySelector('#auto-cocina')?.addEventListener('change', (e) => {
   }
 });
 
-// ───────────── Cliente (caja) o mesa (mozo) ─────────────
+// Cliente (caja) o mesa (mozo)
 let clientes = null;
 let mesaInput = null;
 if (MOZO) {
@@ -415,7 +415,7 @@ if (MOZO) {
   });
 }
 
-// ───────────── Confirmar ─────────────
+// Confirmar
 els.confirmar.addEventListener('click', async () => {
   if (!state.carrito.length) return;
   const metodo = app.querySelector('[name=metodo]:checked')?.value ?? 'Efectivo';
@@ -490,7 +490,7 @@ app.querySelector('#creado-otro').addEventListener('click', () => {
   app.querySelector('#buscar').focus();
 });
 
-// ───────────── Modo edición ─────────────
+// Modo edición
 async function cargarPedido() {
   try {
     const p = await api.get(`${BASE}/pedidos/${editId}`);

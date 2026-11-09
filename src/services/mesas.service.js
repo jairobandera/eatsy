@@ -33,7 +33,7 @@ export async function infoQr(token) {
   return { mozo: { nombre: mozo.nombre } };
 }
 
-// ───────────── Acceso del celular a una mesa (QR del mozo + código de la mesa) ─────────────
+// Acceso del celular a una mesa (QR del mozo + código de la mesa)
 export const MESA_ACCESO_HORAS = 12;
 
 // Frenos contra adivinar códigos: 15 fallos por mesa cada 10 minutos (con 4 dígitos, adivinar llevaría

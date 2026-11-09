@@ -107,7 +107,7 @@ export function requireSuperadmin(req, _res, next) {
 }
 
 /**
- * Protege las páginas HTML: sin sesión → /login; rol incorrecto → su pantalla de inicio.
+ * Protege las páginas HTML: sin sesión -> /login; rol incorrecto -> su pantalla de inicio.
  */
 export function pageGuard(...roles) {
   return (req, res, next) => {

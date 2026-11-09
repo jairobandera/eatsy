@@ -55,7 +55,7 @@ export const cart = {
     return items.reduce((s, i) => s + (i.precio_original - i.precio) * i.cantidad, 0);
   },
 
-  // ───── Cupón ─────
+  // Cupón
   get cupon() {
     return cupon;
   },

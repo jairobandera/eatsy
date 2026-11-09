@@ -325,7 +325,7 @@ export async function listarLlamados() {
   return { preparando: preparando.rows.map(toPublicDto), listos: listos.rows.map(toPublicDto) };
 }
 
-// ───────────── Mozos ─────────────
+// Mozos
 
 const nuevoCodigoMesa = () => String(crypto.randomInt(0, 10000)).padStart(4, '0');
 

@@ -29,7 +29,7 @@ app.innerHTML = `
 
 const $mesas = app.querySelector('#mesas');
 const $llamados = app.querySelector('#llamados');
-const pedidos = new Map(); // id → pedido (para las acciones)
+const pedidos = new Map(); // id -> pedido (para las acciones)
 
 const resumenItems = (p) => p.detalles.map((d) => `${d.cantidad}x ${d.producto.nombre}`).join(', ');
 const pagado = (p) => p.pago?.estado === 'Completado';
@@ -119,7 +119,7 @@ async function load() {
     $mesas.innerHTML = `<div class="col-12 text-danger">${escapeHtml(err.message)}</div>`;
   }
 }
-// ───────────── Acciones ─────────────
+// Acciones
 async function pedirMetodo(titulo, total) {
   const r = await Swal.fire({
     title: titulo,
@@ -235,7 +235,7 @@ app.querySelector('#btn-nueva').addEventListener('click', async () => {
   }
 });
 
-// ───────────── Tiempo real ─────────────
+// Tiempo real
 const recargar = debounce(load, 250);
 iniciarAvisosMozo({
   estadoAnterior: (id) => pedidos.get(id)?.estado,

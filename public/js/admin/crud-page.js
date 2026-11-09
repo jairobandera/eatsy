@@ -4,11 +4,7 @@ import { mountLayout } from '../core/layout.js';
 import { confirmDialog, debounce, escapeHtml, html, renderPagination, showError, toast, withLoading } from '../core/ui.js';
 
 /**
- * Página CRUD genérica con:
- *  - pestañas Activos / Deshabilitados, búsqueda y paginación;
- *  - modal de alta/edición;
- *  - deshabilitar / habilitar (baja lógica).
- *
+ * Página CRUD genérica (activos/deshabilitados, búsqueda, paginación y modal de alta/edición).
  * @param {object} cfg
  * @param {string} cfg.endpoint     ej. '/admin/categorias'
  * @param {string} cfg.title        título de la página

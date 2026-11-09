@@ -1,14 +1,9 @@
 import { WebSocketServer } from './server.js';
 
-/**
- * Capa de "tiempo real" de la app: decide qué evento recibe cada pantalla.
- *
- *  - Personal (Administrador, Cajero, Cocina): datos completos de pedidos.
- *  - Kiosco (rol Cliente): solo avisos de catálogo.
- *  - Pantalla pública de llamados (sin sesión): datos mínimos y enmascarados.
- *  - Celular de un cliente siguiendo su pedido: SOLO los cambios de ese pedido.
- *  - Mozo: solo los pedidos que tomó él y los llamados de sus mesas.
- *  - Celular en una mesa (entró con el QR del mozo y el código de la mesa): solo los pedidos de esa mesa.
+/*
+ * Acá se decide qué le llega a cada pantalla por websocket.
+ * El personal ve todo, el kiosco solo cambios del catálogo, la pantalla de llamados datos
+ * mínimos, y los celulares (seguimiento, mesa) y los mozos solo lo que es suyo.
  */
 const STAFF = new Set(['Administrador', 'Cajero', 'Cocina', 'Superadmin']);
 

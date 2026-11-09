@@ -43,7 +43,7 @@ export const usuariosController = crudController(usuariosService, {
   },
 });
 
-// ───────────── Productos (multipart/form-data por la imagen) ─────────────
+// Productos (multipart/form-data por la imagen)
 const productoSchema = {
   nombre: { type: 'string', required: true, maxLength: 255 },
   descripcion: { type: 'string', required: true, maxLength: 2000, label: 'descripción' },
@@ -104,7 +104,7 @@ export const productosController = {
   habilitar: async (req, res) => res.json(await productosService.habilitar(parseId(req.params.id))),
 };
 
-// ───────────── Promociones ─────────────
+// Promociones
 export const promocionesController = crudController(promocionesService, {
   schema: {
     nombre: { type: 'string', required: true, maxLength: 255 },
@@ -117,7 +117,7 @@ export const promocionesController = crudController(promocionesService, {
   },
 });
 
-// ───────────── Reglas de puntos ─────────────
+// Reglas de puntos
 const reglaSchema = {
   monto_min: { type: 'number', required: true, min: 0, label: 'monto mínimo' },
   monto_max: { type: 'number', required: true, min: 0, label: 'monto máximo' },
@@ -134,7 +134,7 @@ export const reglasPuntosController = {
   },
 };
 
-// ───────────── Estadísticas ─────────────
+// Estadísticas
 export async function getEstadisticas(req, res) {
   const hoy = today();
   const { start_date, end_date } = validate(

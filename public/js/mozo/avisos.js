@@ -4,8 +4,8 @@ import { toast } from '../core/ui.js';
 
 /**
  * Avisos del mozo en cualquiera de sus pantallas (lista de mesas o tomando un pedido):
- *  - pedido listo en la cocina → campana, vibración y aviso;
- *  - una mesa lo llama desde el QR → sonido discreto y queda anotado hasta que toca "Voy".
+ *  - pedido listo en la cocina -> campana, vibración y aviso;
+ *  - una mesa lo llama desde el QR -> sonido discreto y queda anotado hasta que toca "Voy".
  * Los llamados se guardan en la sesión del navegador para no perderlos al cambiar de pantalla.
  */
 const KEY = 'ap_mozo_llamados';

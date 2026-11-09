@@ -2,15 +2,8 @@ import { unprocessable } from './http-error.js';
 import { isValidYmd } from './dates.js';
 
 /**
- * Validador liviano basado en esquemas.
- *
- *   validate(req.body, {
- *     nombre: { type: 'string', required: true, maxLength: 255 },
- *     precio: { type: 'number', required: true, min: 0 },
- *   });
- *
- * Devuelve un objeto limpio (solo con los campos del esquema) o lanza 422
- * con { errors: { campo: 'mensaje' } }.
+ * Valida un objeto contra un esquema, ej: validate(req.body, { nombre: { type: 'string', required: true } }).
+ * Devuelve solo los campos del esquema o tira un 422 con los errores por campo.
  */
 export function validate(input, schema) {
   const data = {};

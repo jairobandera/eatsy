@@ -36,7 +36,7 @@ export async function request(path, { method = 'GET', body, query, signal } = {}
 
   const data = res.status === 204 ? null : await res.json().catch(() => null);
 
-  // Sesión vencida → login. (Excepto en rutas públicas/de seguimiento: el celular del cliente nunca va al login.)
+  // Sesión vencida -> login. (Excepto en rutas públicas/de seguimiento: el celular del cliente nunca va al login.)
   if (res.status === 401 && !/^\/(auth|seguimiento|publico)(\/|$)/.test(path)) {
     window.location.href = `/login?next=${encodeURIComponent(location.pathname + location.search)}`;
     throw new ApiError(401, data);

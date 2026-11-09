@@ -25,7 +25,7 @@ let mozo = '';
 let mesa = null;
 let rt = null;
 let pollTimer = null;
-let estados = new Map(); // id → estado (para avisar cuando pasa a "Listo")
+let estados = new Map(); // id -> estado (para avisar cuando pasa a "Listo")
 
 function mostrar(vista) {
   for (const id of ['cargando', 'vista-error', 'vista-mesa', 'vista-pedidos']) $(id).hidden = id !== vista;
@@ -36,7 +36,7 @@ function mostrarError(texto) {
   mostrar('vista-error');
 }
 
-// ───────────── Paso 1: mesa + código ─────────────
+// Paso 1: mesa + código
 function pedirMesa({ aviso = '' } = {}) {
   mesa = null;
   rt?.close();
@@ -81,7 +81,7 @@ $('form-mesa').addEventListener('submit', async (e) => {
   });
 });
 
-// ───────────── Paso 2: pedidos de la mesa ─────────────
+// Paso 2: pedidos de la mesa
 function abrirMesa(data) {
   mesa = data.mesa;
   estados = new Map(data.pedidos.map((p) => [p.id, p.estado]));
@@ -171,7 +171,7 @@ function conectar() {
 
 document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && refrescar());
 
-// ───────────── Llamar al mozo ─────────────
+// Llamar al mozo
 let cuentaRegresiva = null;
 function bloquearLlamado(segundos, texto) {
   const btn = $('btn-llamar');
@@ -210,7 +210,7 @@ $('btn-cambiar').addEventListener('click', async () => {
   pedirMesa();
 });
 
-// ───────────── Inicio ─────────────
+// Inicio
 try {
   const info = await api.get(`/mesa/${encodeURIComponent(token)}`);
   mozo = info.mozo.nombre;

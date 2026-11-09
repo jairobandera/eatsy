@@ -52,7 +52,7 @@ export function logoNegocio(req, res) {
   res.set('Cache-Control', cache).type(m[1]).send(Buffer.from(m[2], 'base64'));
 }
 
-// ───────────── API del superadmin ─────────────
+// API del superadmin
 
 async function resumen() {
   const cfg = obtenerConfig();

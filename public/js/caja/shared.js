@@ -122,7 +122,7 @@ export const pagoSelect = (p) =>
       </select>`
     : '–';
 
-// ───────────── Modal de detalle ─────────────
+// Modal de detalle
 let modal;
 let modalEl;
 let onChange = () => {};

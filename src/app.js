@@ -30,7 +30,7 @@ export function createApp() {
     res.set('Cache-Control', 'no-store').json({ ok: true, uptime: Math.round(process.uptime()) });
   });
 
-  // JS/CSS sin caché larga: el navegador revalida (ETag → 304) y cada deploy llega al instante.
+  // JS/CSS sin caché larga: el navegador revalida (ETag -> 304) y cada deploy llega al instante.
   // Imágenes y sonidos sí se cachean (no cambian entre versiones).
   const staticOpts = {
     index: false,

@@ -57,7 +57,7 @@ const pedidoSchema = {
   codigo_cupon: cuponSchema,
 };
 
-// ───────────── Catálogo (kiosco y caja) ─────────────
+// Catálogo (kiosco y caja)
 export const catalogoController = {
   productos: async (req, res) => {
     const { page, perPage } = pagination(req.query, 12, 48);
@@ -82,7 +82,7 @@ export const catalogoController = {
   },
 };
 
-// ───────────── Caja ─────────────
+// Caja
 export const cajaController = {
   list: async (req, res) => {
     const { page, perPage } = pagination(req.query, 10, 50);
@@ -135,7 +135,7 @@ export const cajaController = {
   },
 };
 
-// ───────────── Kiosco (autoservicio) ─────────────
+// Kiosco (autoservicio)
 export const kioscoController = {
   create: async (req, res) => {
     const data = validate(req.body, { items: itemsSchema, metodo_pago: pedidoSchema.metodo_pago, codigo_cupon: cuponSchema });
@@ -161,7 +161,7 @@ export const kioscoController = {
   },
 };
 
-// ───────────── Cocina ─────────────
+// Cocina
 export const cocinaController = {
   list: async (req, res) => res.json(await listarPedidosCocina({ order: req.query.order === 'desc' ? 'desc' : 'asc' })),
   get: async (req, res) => res.json(await obtenerPedido(parseId(req.params.id))),
@@ -170,7 +170,7 @@ export const cocinaController = {
   entregar: async (req, res) => res.json(await entregarPedidoTotem(parseId(req.params.id))),
 };
 
-// ───────────── Mozo (pedidos por mesa) ─────────────
+// Mozo (pedidos por mesa)
 const mesaSchema = { type: 'integer', required: true, min: 1, max: MAX_MESA, label: 'mesa' };
 const metodoSchema = { metodo_pago: pedidoSchema.metodo_pago };
 const mesaParam = (req) => validate({ mesa: req.params.mesa }, { mesa: mesaSchema }).mesa;
@@ -242,12 +242,12 @@ export const cajaMesasController = {
   },
 };
 
-// ───────────── Pantalla pública de llamados ─────────────
+// Pantalla pública de llamados
 export const publicoController = {
   llamados: async (_req, res) => res.json(await listarLlamados()),
 };
 
-// ───────────── Clientes (caja) ─────────────
+// Clientes (caja)
 const clienteSchema = {
   cedula: { type: 'string', required: true, maxLength: 20, pattern: /^[0-9.\-]+$/, patternMessage: 'La cédula solo puede tener números, puntos o guiones.', label: 'cédula' },
   nombre: { type: 'string', required: true, maxLength: 50 },

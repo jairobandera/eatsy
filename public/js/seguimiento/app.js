@@ -27,7 +27,7 @@ let rt = null;
 let pollTimer = null;
 let sonidoListo = false;
 
-// ───────────── Vistas ─────────────
+// Vistas
 function mostrarForm({ codigo = '' } = {}) {
   pedido = null;
   rt?.close();
@@ -84,7 +84,7 @@ function mostrarEstado(p, { avisar = true } = {}) {
   if (p.estado !== 'Listo') document.title = `Mi pedido · ${nombreNegocio()}`;
 }
 
-// ───────────── Aviso de "pedido listo" ─────────────
+// Aviso de "pedido listo"
 function avisarListo() {
   // Mismo sonido que usa la caja/cocina para un pedido nuevo, repetido para que se escuche.
   if (!sonidoListo) {
@@ -127,7 +127,7 @@ function activarAvisos() {
   $('btn-activar').hidden = true;
 }
 
-// ───────────── Conexión en vivo ─────────────
+// Conexión en vivo
 function conectar() {
   rt?.close();
   rt = createRealtime({
@@ -158,7 +158,7 @@ async function refrescar() {
 
 document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && pedido && refrescar());
 
-// ───────────── Formulario ─────────────
+// Formulario
 form.codigo.addEventListener('input', () => {
   form.codigo.value = form.codigo.value.toUpperCase().replace(/^PED-?/, '').replace(/[^A-Z0-9]/g, '');
 });
@@ -201,7 +201,7 @@ $('btn-otro').addEventListener('click', async () => {
 });
 $('btn-activar').addEventListener('click', activarAvisos);
 
-// ───────────── Inicio ─────────────
+// Inicio
 const codigoUrl = (new URLSearchParams(location.search).get('codigo') || '').toUpperCase().replace(/^PED-?/, '');
 try {
   // ¿Ya estaba siguiendo un pedido? (cookie de seguimiento)

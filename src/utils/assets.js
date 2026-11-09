@@ -5,13 +5,8 @@ import config from '../config/index.js';
 import { obtenerConfig, paletaMarca, versionLogo } from '../services/config.service.js';
 
 /**
- * "Cache busting" de JS y CSS: cada página pide sus archivos con ?v=<hash del contenido>.
- * Si un archivo cambia en un deploy, cambia su URL y ningún navegador puede seguir usando
- * una copia vieja (por ejemplo, un celular que guardó la versión anterior).
- *
- *  - <script src> y <link href> de /js y /css llevan su ?v=.
- *  - Los módulos que se importan entre sí (import '../core/api.js') se versionan con un
- *    import map que se inserta en la página.
+ * Cache busting: cada JS y CSS se pide con ?v=<hash>, así después de un deploy ningún
+ * navegador se queda con la versión vieja. Los imports entre módulos van por un import map.
  */
 const hash = (file) => crypto.createHash('sha1').update(fs.readFileSync(file)).digest('hex').slice(0, 10);
 

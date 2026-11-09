@@ -1,4 +1,4 @@
-# 🍔 AutoPedido 2.0 (Eatsy)
+# AutoPedido 2.0 (Eatsy)
 
 Sistema de autopedido para locales gastronómicos: **kiosco de autoservicio táctil**, **caja**, **cocina**, **mozos con pedidos por mesa**, **pantalla pública de llamados** y **panel de administración**, todo sincronizado en tiempo real.
 
@@ -15,7 +15,7 @@ Todas las dependencias son gratuitas y de código abierto. Las librerías del fr
 
 ---
 
-## 🚀 Puesta en marcha
+## Puesta en marcha
 
 Requisitos: **Node.js 22.13+** y **MySQL 8 / MariaDB 10.4+** (por ejemplo, el de XAMPP).
 
@@ -68,11 +68,11 @@ Después del primer arranque el modo ya no borra ni agrega nada: cambiar `APP_MO
 - **Seguimiento desde el celular**: `http://IP-DEL-SERVIDOR:3000/seguimiento` (ver más abajo).
 - **Salir del kiosco:** tocar 5 veces seguidas el logo e ingresar el PIN (`KIOSCO_PIN`, por defecto `4500`).
 
-> 💡 Para probar varios roles a la vez en el mismo navegador usá `localhost:3000` para uno y `127.0.0.1:3000` para otro (las cookies son independientes), o una ventana de incógnito.
+> Para probar varios roles a la vez en el mismo navegador usá `localhost:3000` para uno y `127.0.0.1:3000` para otro (las cookies son independientes), o una ventana de incógnito.
 
 ---
 
-## ☁️ Desplegar en Render
+## Desplegar en Render
 
 Render no ofrece MySQL, así que la base va en un proveedor aparte. Opción gratuita recomendada: **[Aiven for MySQL](https://aiven.io/mysql)** (plan *Free*, MySQL 8 real).
 
@@ -94,7 +94,7 @@ Tené en cuenta:
 
 ---
 
-## 📦 Paquetes y superadmin
+## Paquetes y superadmin
 
 Cada negocio tiene **su propia instalación** (su servicio en Render y su base). En cada una hay un **superadmin oculto** para el proveedor de la app:
 
@@ -119,7 +119,7 @@ Sin configuración guardada, la instalación funciona como siempre (Full, sin ve
 
 ---
 
-## 🍔 Extras, cupones y teclado táctil
+## Extras, cupones y teclado táctil
 
 - **Extras de ingredientes**: en *Admin → Ingredientes* cada ingrediente puede tener un **precio como extra** (vacío o 0 = no se ofrece como extra: el cliente solo lo puede quitar). En *Admin → Productos*, cada ingrediente del producto tiene el interruptor **Extra** para decidir si en ESE producto se puede pedir más cantidad (ej. carne extra en la hamburguesa sí, en la empanada no; las empanadas vienen sin extras). En el kiosco y en la caja, al elegir un producto se puede pedir hasta **3 unidades extra** de esos ingredientes (ej. 2 carnes más en la hamburguesa). Se cobran aparte de la promoción y se ven en caja, cocina, tickets y seguimiento.
 - **Promociones**:
@@ -130,7 +130,7 @@ Sin configuración guardada, la instalación funciona como siempre (Full, sin ve
 
 ---
 
-## 🍽️ Mozos y mesas
+## Mozos y mesas
 
 - **Abrir mesa**: cuando se sienta un cliente, el mozo toca **Nueva mesa** y la mesa queda creada (aunque todavía no tenga pedidos) con un **código de 4 números** para el celular del cliente. Un número de mesa lo atiende un solo mozo a la vez. Si se toma un pedido para una mesa que no estaba abierta, se abre sola.
 - **Mozo** (`/mozo`, pensado para el celular): toma pedidos indicando el **número de mesa**; el pedido va **directo a la cocina** y aparece en la caja. Puede agregar más pedidos a una mesa que ya pidió, editar los que todavía no salieron y ve sus mesas abiertas con lo que falta cobrar.
@@ -145,7 +145,7 @@ Sin configuración guardada, la instalación funciona como siempre (Full, sin ve
 
 ---
 
-## 🔥 Qué va a la cocina
+## Qué va a la cocina
 
 - Cada categoría tiene el interruptor **"Se prepara en cocina"** (*Admin → Categorías*). Por defecto vienen sin cocina **Bebidas, Bebidas Alcohólicas, Postres y Cafetería**.
 - Un producto va a la cocina solo si **todas** sus categorías lo indican (por ejemplo, un jugo en *Bebidas* y *Menú Infantil* lo despacha la caja).
@@ -154,7 +154,7 @@ Sin configuración guardada, la instalación funciona como siempre (Full, sin ve
 
 ---
 
-## 📱 Seguimiento del pedido desde el celular
+## Seguimiento del pedido desde el celular
 
 1. El cliente escanea el **QR de la pantalla de llamados** (apunta a `http://<IP-de-la-PC>:3000/seguimiento`).
 2. Ingresa el **código de su ticket** (`PED-XXXX`, también acepta solo `XXXX`). Si el pedido se hizo en caja con su **cédula** (para sumar puntos), también se la pide.
@@ -172,7 +172,7 @@ Requisitos de red:
 
 ---
 
-## 🔄 Flujo de un pedido
+## Flujo de un pedido
 
 ```
 Kiosco / Caja ──crea──▶ Recibido ──caja "Cocina"──▶ En Preparación ──cocina "Listo"──▶ Listo ──caja "Entregar"──▶ Entregado
@@ -194,7 +194,7 @@ Además, el celular que sigue un pedido recibe `pedido:estado` y `pedido:actuali
 
 ---
 
-## 🗂️ Estructura
+## Estructura
 
 ```
 AutoPedido2.0/
@@ -227,7 +227,7 @@ AutoPedido2.0/
 
 ---
 
-## ✨ Mejoras respecto a la versión Laravel
+## Mejoras respecto a la versión Laravel
 
 **Funcionales**
 - Promociones con **porcentaje o monto fijo** (antes un “descuento 300” se aplicaba como 300 %) y nunca dejan precio negativo; se aplican igual en **kiosco y caja** (antes la caja las ignoraba) y se muestran con precio tachado.
@@ -250,7 +250,7 @@ AutoPedido2.0/
 
 ---
 
-## 🔌 API (resumen)
+## API (resumen)
 
 Todas las rutas que modifican datos requieren la cabecera `X-Requested-With: fetch`.
 
@@ -278,4 +278,4 @@ WebSocket: `ws://HOST:PORT/ws` (autenticado con la misma cookie de sesión; sin 
 
 ---
 
-👨‍💻 Desarrollado por estudiantes del Tecnólogo Informático – Sede Paysandú: **Alan Ceballos – Jairo Bandera**
+Desarrollado por estudiantes del Tecnólogo Informático – Sede Paysandú: **Alan Ceballos – Jairo Bandera**

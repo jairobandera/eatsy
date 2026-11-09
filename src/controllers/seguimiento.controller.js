@@ -6,7 +6,7 @@ import { publicBaseUrl } from '../utils/network.js';
 import { validate } from '../utils/validator.js';
 
 export const seguimientoController = {
-  /** El cliente ingresa su código (y cédula si corresponde) → cookie de seguimiento. */
+  /** El cliente ingresa su código (y cédula si corresponde) -> cookie de seguimiento. */
   async iniciar(req, res) {
     const data = validate(req.body, {
       codigo: { type: 'string', required: true, maxLength: 20, label: 'código del pedido' },

@@ -16,7 +16,7 @@ import { ROL_LABEL } from './auth.service.js';
 import { moduloActivo, obtenerConfig, rolHabilitado } from './config.service.js';
 import { conPrecios } from './pricing.service.js';
 
-// ───────────── Categorías e ingredientes ─────────────
+// Categorías e ingredientes
 export const categoriasService = createCatalogService({ repo: categoriasRepo, entidad: 'categoría', genero: 'a' });
 
 export const ingredientesService = createCatalogService({
@@ -26,7 +26,7 @@ export const ingredientesService = createCatalogService({
   toRecord: (data) => ('precio_extra' in data ? { ...data, precio_extra: Number(data.precio_extra) > 0 ? data.precio_extra : null } : data),
 });
 
-// ───────────── Usuarios ─────────────
+// Usuarios
 const usuariosBase = createCatalogService({
   repo: usuariosRepo,
   entidad: 'usuario',
@@ -86,7 +86,7 @@ export const usuariosService = {
   },
 };
 
-// ───────────── Productos ─────────────
+// Productos
 const isLocalUpload = (img) => typeof img === 'string' && img.startsWith('/uploads/');
 
 async function borrarImagenLocal(img) {
@@ -187,7 +187,7 @@ export const productosService = {
   },
 };
 
-// ───────────── Catálogo público (kiosco y caja) ─────────────
+// Catálogo público (kiosco y caja)
 export const catalogoService = {
   async productos({ categoriaId, buscar, orden, precioMin, precioMax, page, perPage }) {
     const { rows, total } = await productosRepo.list({
@@ -215,7 +215,7 @@ export const catalogoService = {
   },
 };
 
-// ───────────── Promociones ─────────────
+// Promociones
 async function validarPromo(data, excludeId = 0) {
   if (data.codigo) {
     if (data.tipo_descuento !== 'monto') throw unprocessable('El código de cupón solo se permite en promociones de monto fijo.');
@@ -315,7 +315,7 @@ export const promocionesService = {
   },
 };
 
-// ───────────── Reglas de puntos ─────────────
+// Reglas de puntos
 async function validarTramo({ monto_min, monto_max }, excludeId = 0) {
   if (monto_max <= monto_min) throw unprocessable('El monto máximo debe ser mayor que el mínimo.');
   const overlap = await reglasPuntosRepo.findOverlap(monto_min, monto_max, excludeId);

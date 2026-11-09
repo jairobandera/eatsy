@@ -1,5 +1,5 @@
-# Despliegue en Render (https://render.com) — "New > Blueprint" y elegí este repositorio.
-# La base de datos MySQL va aparte (Render no ofrece MySQL administrado): ver README → "Desplegar en Render".
+# Despliegue en Render (https://render.com), "New > Blueprint" y elegí este repositorio.
+# La base de datos MySQL va aparte (Render no ofrece MySQL administrado): ver README -> "Desplegar en Render".
 services:
   - type: web
     name: eatsy
