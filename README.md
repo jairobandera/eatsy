@@ -72,31 +72,27 @@ Después del primer arranque el modo ya no borra ni agrega nada: cambiar `APP_MO
 
 ---
 
-## Desplegar en Render
+## Desplegar en el VPS (Coolify)
 
-La base va en **[Supabase](https://supabase.com)** (PostgreSQL gratis). Puede ser un proyecto que ya uses para otras cosas: la app solo usa su esquema `eatsy`.
+La app corre en el VPS de **pckairos.cloud** administrado con **[Coolify](https://coolify.io)**, con PostgreSQL en el mismo servidor (esquema `eatsy`).
 
-1. **Base de datos**: en Supabase → *Connect* → **Session pooler** copiá la cadena (`postgresql://postgres.REF:CLAVE@aws-1-….pooler.supabase.com:5432/postgres`). Usá el *Session pooler* (5432): el *Transaction pooler* (6543) no sirve para esta app (si lo pegás, se cambia solo a 5432). La conexión directa (`db.REF.supabase.co`) es solo IPv6 y Render no la alcanza.
-2. **Web**: en Render → *New → Blueprint* → elegí este repositorio. Toma la configuración de [`render.yaml`](render.yaml).
-3. Completá las variables que pide:
-   - `DATABASE_URL` → la cadena del paso 1 con tu contraseña (el SSL se activa solo; la contraseña puede tener símbolos sin escapar).
-   - `APP_MODE` → `demo` para mostrarlo con datos de prueba, o `produccion` para el local real.
-   - `ADMIN_PASSWORD` → contraseña del administrador (solo modo producción).
+1. **Base de datos**: en Coolify, el recurso PostgreSQL del proyecto. La app solo usa su esquema `eatsy`, así que puede compartir la base con otras apps.
+2. **App**: en Coolify → *New resource → Public repository* → este repositorio, build pack **Nixpacks**, puerto **3000**, dominio `https://eatsy.pckairos.cloud`, health check `/api/salud`.
+3. Variables de entorno:
+   - `DATABASE_URL` → `postgresql://USUARIO:CLAVE@HOST-INTERNO:5432/apps` (el host es el nombre interno del contenedor de PostgreSQL en Coolify) y `DB_SSL=false`.
+   - `NODE_ENV=production`, `TRUST_PROXY=1`, `PUBLIC_URL=https://eatsy.pckairos.cloud`, `SESSION_SECRET` (32+ caracteres al azar), `NIXPACKS_NODE_VERSION=22`.
+   - `APP_MODE` → `demo` para mostrarlo con datos de prueba, o `produccion` para el local real (con `ADMIN_PASSWORD`).
    - `KIOSCO_PIN` → PIN para salir del kiosco.
-4. Deploy. Las tablas se crean solas. La URL de Render se usa automáticamente en el QR de seguimiento (`RENDER_EXTERNAL_URL`).
+4. **Almacenamiento persistente** montado en `/app/uploads` para que las fotos subidas desde el panel no se pierdan en cada deploy.
+5. Deploy. Las tablas se crean solas. `PUBLIC_URL` se usa en el QR de seguimiento.
 
-Tené en cuenta:
-- **Plan gratuito**: el servicio se “duerme” tras 15 minutos sin tráfico y tarda ~1 minuto en despertar. Para evitarlo, creá un cron en **[cron-job.org](https://console.cron-job.org/dashboard)** que haga `GET https://TU-APP.onrender.com/api/health` **cada 10 minutos** (responde `{"ok":true}` al instante, sin tocar la base de datos).
-- **Supabase gratis**: pausa los proyectos que pasan una semana sin actividad. Para evitarlo, agregá un segundo cron a `GET https://TU-APP.onrender.com/api/salud` (por ejemplo cada 30 minutos): esa ruta hace una consulta a la base. Además, mientras el servidor está prendido, la app consulta la base sola cada hora (`DB_KEEPALIVE_MINUTOS`, 0 = desactivado). La app abre pocas conexiones (`DB_POOL=5`) porque el límite del plan gratis se comparte entre todos los proyectos.
-- **Imágenes subidas desde el panel**: el disco de Render se borra en cada deploy/reinicio, así que las fotos subidas como archivo se pierden. Usá el campo **URL de la imagen** (por ejemplo, fotos alojadas en Cloudinary o Imgur) o agregá un *Render Disk* montado en `uploads/` (plan pago). Las fotos de los productos de demo vienen en el repositorio y no se pierden.
-- `SESSION_SECRET` lo genera Render solo; `TRUST_PROXY=1` y `NODE_ENV=production` ya vienen en el blueprint (cookies seguras por HTTPS).
-- Rutas de salud: `/api/health` (ping liviano para el cron) y `/api/salud` (además verifica la conexión a la base; la usa Render como *health check*).
+Rutas de salud: `/api/health` (ping liviano) y `/api/salud` (además verifica la conexión a la base; la usa Coolify como *health check*). Los respaldos diarios de la base los hace Coolify.
 
 ---
 
 ## Paquetes y superadmin
 
-Cada negocio tiene **su propia instalación** (su servicio en Render y su base). En cada una hay un **superadmin oculto** para el proveedor de la app:
+Cada negocio tiene **su propia instalación** (su servicio y su base). En cada una hay un **superadmin oculto** para el proveedor de la app:
 
 - Se define con las variables `SUPERADMIN_USER` y `SUPERADMIN_PASSWORD` (contraseña de 6 caracteres o más). No se guarda en la base, no aparece en *Admin → Usuarios* y, sin esas variables, no existe.
 - Entra por el login normal y va a **`/superadmin`**. Para cualquier otro usuario esa pantalla y su API responden *404*. También puede entrar al panel del negocio para dar soporte.
@@ -115,7 +111,7 @@ Sin configuración guardada, la instalación funciona como siempre (Full, sin ve
 
 **Respaldo**: el botón **Descargar respaldo** baja el esquema de la app completo (estructura + datos, sin otros proyectos de la base) en un archivo `.sql`. Para restaurarlo, en una base donde el esquema `eatsy` no exista o esté vacío: `psql "postgresql://…:5432/postgres" -f respaldo.sql`.
 
-**Todas mis instalaciones** (panel central): en la pestaña del mismo nombre cargás las direcciones de tus otras instalaciones y ves de todas el paquete, la licencia, los pedidos y ventas de hoy y del mes, los usuarios y el último pedido, con un botón para entrar a administrarla. Para que se puedan consultar entre sí, definí la **misma** variable `SUPERADMIN_API_KEY` (24 caracteres o más) en todas. Cada instalación responde su estado en `GET /api/superadmin/estado` solo con esa clave (`Authorization: Bearer …`); sin ella, la ruta da 404. Las instalaciones del plan gratis de Render que estén dormidas pueden tardar en contestar: el panel espera hasta 30 s y si no, la marca como "sin respuesta".
+**Todas mis instalaciones** (panel central): en la pestaña del mismo nombre cargás las direcciones de tus otras instalaciones y ves de todas el paquete, la licencia, los pedidos y ventas de hoy y del mes, los usuarios y el último pedido, con un botón para entrar a administrarla. Para que se puedan consultar entre sí, definí la **misma** variable `SUPERADMIN_API_KEY` (24 caracteres o más) en todas. Cada instalación responde su estado en `GET /api/superadmin/estado` solo con esa clave (`Authorization: Bearer …`); sin ella, la ruta da 404. Si una instalación tarda en contestar, el panel espera hasta 30 s y si no, la marca como "sin respuesta".
 
 ---
 

@@ -12,7 +12,7 @@ import { estadoLicencia, guardarConfig, obtenerConfig } from './config.service.j
  * GET /api/superadmin/estado, protegido con la clave SUPERADMIN_API_KEY que es la misma en
  * todas tus instalaciones. Desde el panel de cualquiera se consultan todas a la vez.
  */
-export const TIMEOUT_MS = 30_000; // Render (plan gratis) tarda ~30-60 s en despertar una instalación dormida
+export const TIMEOUT_MS = 30_000; // margen para instalaciones lentas en responder
 export const MAX_INSTALACIONES = 100;
 
 /** ¿El pedido trae la clave del panel central? (comparación en tiempo constante) */

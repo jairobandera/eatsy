@@ -24,8 +24,8 @@ export function createApp() {
 
   app.use(securityHeaders);
 
-  // Ping liviano para servicios tipo cron-job.org: mantiene despierta la app en el plan gratis
-  // de Render. Va antes de todo (sin sesión ni base de datos) para responder al instante.
+  // Ping liviano para monitoreo (health check) del servidor.
+  // Va antes de todo (sin sesión ni base de datos) para responder al instante.
   app.get('/api/health', (_req, res) => {
     res.set('Cache-Control', 'no-store').json({ ok: true, uptime: Math.round(process.uptime()) });
   });
@@ -52,7 +52,7 @@ export function createApp() {
   app.use(loadUser);
   app.use(licenciaGuard);
 
-  // Logo del negocio (lo sube el superadmin; se guarda en la base porque el disco de Render es efímero).
+  // Logo del negocio (lo sube el superadmin; se guarda en la base así no depende del disco del servidor).
   app.get('/negocio/logo', logoNegocio);
 
   app.use('/api', apiRoutes);

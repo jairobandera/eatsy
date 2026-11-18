@@ -27,7 +27,7 @@ export const uploadImagenProducto = multer({
 
 /**
  * Logo del negocio (campo `logo`, máx. 300 KB). Queda en memoria: se guarda en la base porque el
- * disco de Render se borra en cada deploy.
+ * disco del contenedor se borra en cada deploy.
  */
 export const uploadLogo = multer({
   storage: multer.memoryStorage(),

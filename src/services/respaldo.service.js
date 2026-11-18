@@ -6,7 +6,7 @@ import { now } from '../utils/dates.js';
 
 /**
  * Respaldo completo del esquema de la app en un archivo .sql (estructura + datos), sin depender
- * de pg_dump (en Render no está). Se escribe por partes para no cargar toda la base en memoria.
+ * de pg_dump (no siempre está instalado). Se escribe por partes para no cargar toda la base en memoria.
  * Solo incluye el esquema de la app (DB_SCHEMA): nunca otros proyectos de la misma base.
  *
  * Para restaurarlo en una base PostgreSQL (el esquema no debe existir o tiene que estar vacío):

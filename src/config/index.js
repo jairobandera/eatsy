@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 export const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 
 // Carga nativa del .env (Node >= 21.7), sin dependencias externas.
-// En la nube (Render, etc.) no hay .env: las variables vienen del panel del servicio.
+// En el servidor (Coolify) no hay .env: las variables vienen del panel del servicio.
 const envFile = path.join(ROOT_DIR, '.env');
 if (fs.existsSync(envFile)) {
   process.loadEnvFile(envFile);
@@ -121,18 +121,17 @@ const config = Object.freeze({
     user: env.ADMIN_USER || 'Admin',
     password: env.ADMIN_PASSWORD || '',
   },
-  // Detrás de un proxy (Render, Railway, Nginx...) poner TRUST_PROXY=1 para ver la IP real del cliente.
+  // Detrás de un proxy (Coolify/Traefik, Nginx...) poner TRUST_PROXY=1 para ver la IP real del cliente.
   trustProxy: env.TRUST_PROXY ? (Number.isNaN(Number(env.TRUST_PROXY)) ? env.TRUST_PROXY : Number(env.TRUST_PROXY)) : 'loopback',
   // URL con la que los celulares llegan al servidor (QR de seguimiento). Vacío = se detecta la IP local.
-  // En Render se toma sola de RENDER_EXTERNAL_URL.
-  publicUrl: env.PUBLIC_URL || env.RENDER_EXTERNAL_URL || '',
+  publicUrl: env.PUBLIC_URL || '',
   kioscoPin: env.KIOSCO_PIN || '4500',
   // Superadmin oculto (solo el proveedor de la app): no se guarda en la base. Sin estas variables no existe.
   superadmin: env.SUPERADMIN_USER && env.SUPERADMIN_PASSWORD ? { user: env.SUPERADMIN_USER.trim(), password: env.SUPERADMIN_PASSWORD } : null,
   // Clave compartida entre todas tus instalaciones para el panel central (vacía = no se puede consultar desde otra).
   superadminApiKey: env.SUPERADMIN_API_KEY && env.SUPERADMIN_API_KEY.length >= 24 ? env.SUPERADMIN_API_KEY : null,
-  // Versión desplegada (Render la pone sola) para verla en el panel central.
-  version: (env.RENDER_GIT_COMMIT || '').slice(0, 7) || null,
+  // Versión desplegada (Coolify la pone sola en SOURCE_COMMIT) para verla en el panel central.
+  version: (env.SOURCE_COMMIT || '').slice(0, 7) || null,
   productPlaceholder: env.PRODUCT_PLACEHOLDER || '/img/placeholder-producto.svg',
   paths: {
     public: path.join(ROOT_DIR, 'public'),

@@ -303,7 +303,7 @@ function renderInstalaciones() {
   pane.innerHTML = html`
     ${panel.clave_configurada
       ? ''
-      : html`<div class="alert alert-warning small"><i class="bi bi-key me-1"></i>Para ver las demás instalaciones definí la misma <b>SUPERADMIN_API_KEY</b> (24 caracteres o más) en todas, en Render → Environment.</div>`}
+      : html`<div class="alert alert-warning small"><i class="bi bi-key me-1"></i>Para ver las demás instalaciones definí la misma <b>SUPERADMIN_API_KEY</b> (24 caracteres o más) en todas, en Coolify → Environment Variables.</div>`}
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
       <div class="small text-muted">${todas.length} instalación${todas.length === 1 ? '' : 'es'}${caidas ? html` · <span class="text-danger">${caidas} sin respuesta</span>` : ''}</div>
       <div class="d-flex gap-2">
@@ -334,7 +334,7 @@ function renderInstalaciones() {
 
 const itemEditor = (i) => html`<div class="row g-2 mb-2 inst-item">
     <div class="col-md-4"><input class="form-control form-control-sm" name="nombre" maxlength="60" placeholder="Nombre (opcional)" value="${i.nombre}"></div>
-    <div class="col-md"><input class="form-control form-control-sm" name="url" type="url" required placeholder="https://eatsy-negocio.onrender.com" value="${i.url}"></div>
+    <div class="col-md"><input class="form-control form-control-sm" name="url" type="url" required placeholder="https://negocio.pckairos.cloud" value="${i.url}"></div>
     <div class="col-md-auto"><button type="button" class="btn btn-sm btn-outline-danger rounded-pill w-100" data-quitar aria-label="Quitar"><i class="bi bi-trash"></i></button></div>
   </div>`;
 

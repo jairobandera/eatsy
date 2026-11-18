@@ -61,7 +61,7 @@ router.post('/mesa/llamar', mesaController.llamar);
 router.get('/mesa/:token', mesaController.info);
 router.post('/mesa/:token/ingresar', mesaController.ingresar);
 
-// ── Salud (lo usa Render/Docker para saber si la app y la base responden)
+// ── Salud (lo usa Coolify/Docker para saber si la app y la base responden)
 router.get('/salud', async (_req, res) => {
   try {
     await sql.get('SELECT 1 AS ok');
