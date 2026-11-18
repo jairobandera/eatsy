@@ -1,6 +1,7 @@
 /**
  * Utilidades de base de datos (respetan APP_MODE):
- *   npm run db:reset   -> borra TODAS las tablas y vuelve a inicializar
+ *   npm run db:reset   -> borra el esquema de la app (DB_SCHEMA) con TODAS sus tablas y vuelve a inicializar
+ *                        (no toca otros esquemas de la misma base)
  *                        (demo: datos de prueba · produccion: vacía, solo el admin)
  *   npm run db:seed    -> inicializa solo si la base no tiene usuarios
  *   npm run db:demo    -> agrega pedidos de ejemplo de los últimos 14 días (solo en modo demo)
@@ -15,7 +16,7 @@ const [command, ...flags] = process.argv.slice(2);
 
 try {
   await initDatabase();
-  console.log(`Modo: ${config.appMode} · Base: ${config.db.database}@${config.db.host}`);
+  console.log(`Modo: ${config.appMode} · Base: ${config.db.database}@${config.db.host} · esquema ${config.db.schema}`);
 
   if (command === 'reset') {
     if (!config.isDemo && !flags.includes('--confirmar')) {

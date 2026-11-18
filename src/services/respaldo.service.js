@@ -1,14 +1,33 @@
-import mysql from 'mysql2';
+import fs from 'node:fs';
+import path from 'node:path';
 import config from '../config/index.js';
 import { sql } from '../db/connection.js';
 import { now } from '../utils/dates.js';
 
 /**
- * Respaldo de la base en un .sql sin usar mysqldump (en Render no está). Va por partes para no
- * llenar la memoria. Se restaura con: mysql -u usuario -p nombre_base < respaldo.sql
+ * Respaldo completo del esquema de la app en un archivo .sql (estructura + datos), sin depender
+ * de pg_dump (en Render no está). Se escribe por partes para no cargar toda la base en memoria.
+ * Solo incluye el esquema de la app (DB_SCHEMA): nunca otros proyectos de la misma base.
+ *
+ * Para restaurarlo en una base PostgreSQL (el esquema no debe existir o tiene que estar vacío):
+ *   psql "postgresql://usuario:clave@host:5432/postgres" -f respaldo.sql
  */
 const LOTE = 500;
-const ident = (nombre) => `\`${String(nombre).replace(/`/g, '``')}\``;
+const ident = (nombre) => `"${String(nombre).replace(/"/g, '""')}"`;
+
+/** Literal SQL de PostgreSQL (standard_conforming_strings: solo se duplican las comillas). */
+function literal(v) {
+  if (v === null || v === undefined) return 'NULL';
+  if (typeof v === 'number') return Number.isFinite(v) ? String(v) : 'NULL';
+  if (typeof v === 'boolean') return v ? 'TRUE' : 'FALSE';
+  if (v instanceof Date) return `'${v.toISOString()}'`;
+  return `'${String(v).replace(/'/g, "''")}'`;
+}
+
+const schemaSql = () => fs.readFileSync(path.join(import.meta.dirname, '..', 'db', 'schema.sql'), 'utf8');
+
+/** Tablas en el orden en que se crean (respeta las claves foráneas al insertar). */
+const tablasEnOrden = (texto) => [...texto.matchAll(/CREATE TABLE IF NOT EXISTS (\w+)/g)].map((m) => m[1]);
 
 /** Nombre sugerido del archivo: respaldo-<negocio>-<fecha>.sql */
 export function nombreRespaldo(negocio) {
@@ -21,33 +40,54 @@ export function nombreRespaldo(negocio) {
  * @param {(chunk: string) => void | Promise<void>} escribir
  */
 export async function generarRespaldo(escribir) {
-  const tablas = (await sql.all(`SHOW FULL TABLES WHERE Table_type = 'BASE TABLE'`)).map((r) => Object.values(r)[0]);
+  const esquema = ident(config.db.schema);
+  const estructura = schemaSql();
+  const existentes = new Set(
+    (await sql.all(`SELECT tablename FROM pg_tables WHERE schemaname = current_schema()`)).map((r) => r.tablename),
+  );
+  const tablas = tablasEnOrden(estructura).filter((t) => existentes.has(t));
+
   await escribir(
     [
-      `-- Respaldo de AutoPedido 2.0 · base ${config.db.database} · ${now()}`,
-      `-- ${tablas.length} tablas. Restaurar en una base vacía: mysql -u usuario -p base < este_archivo.sql`,
-      'SET NAMES utf8mb4;',
-      'SET FOREIGN_KEY_CHECKS = 0;',
+      `-- Respaldo de AutoPedido 2.0 · esquema ${config.db.schema} · ${now()}`,
+      `-- ${tablas.length} tablas. Restaurar (con el esquema vacío o sin crear): psql "<DATABASE_URL>" -f este_archivo.sql`,
+      'BEGIN;',
+      `CREATE SCHEMA IF NOT EXISTS ${esquema};`,
+      `SET LOCAL search_path TO ${esquema};`,
+      '',
+      '-- ───── Estructura',
+      estructura.trim(),
       '',
     ].join('\n'),
   );
 
   for (const tabla of tablas) {
-    const crear = Object.values(await sql.get(`SHOW CREATE TABLE ${ident(tabla)}`))[1];
-    await escribir(`\n-- ───── ${tabla}\nDROP TABLE IF EXISTS ${ident(tabla)};\n${crear};\n`);
-
+    await escribir(`\n-- ───── ${tabla}\n`);
     // Orden por la clave primaria: así la paginación por lotes no saltea ni repite filas.
-    const pk = (await sql.all(`SHOW KEYS FROM ${ident(tabla)} WHERE Key_name = 'PRIMARY'`)).sort((a, b) => a.Seq_in_index - b.Seq_in_index);
-    const orden = pk.length ? `ORDER BY ${pk.map((k) => ident(k.Column_name)).join(', ')}` : '';
+    const pk = await sql.all(
+      `SELECT a.attname AS col
+         FROM pg_index i
+         JOIN pg_class c ON c.oid = i.indrelid
+         JOIN pg_namespace n ON n.oid = c.relnamespace
+         JOIN pg_attribute a ON a.attrelid = c.oid AND a.attnum = ANY (i.indkey)
+        WHERE i.indisprimary AND c.relname = ? AND n.nspname = current_schema()
+        ORDER BY a.attnum`,
+      [tabla],
+    );
+    const orden = pk.length ? `ORDER BY ${pk.map((k) => ident(k.col)).join(', ')}` : '';
     for (let offset = 0; ; offset += LOTE) {
       const filas = await sql.all(`SELECT * FROM ${ident(tabla)} ${orden} LIMIT ? OFFSET ?`, [LOTE, offset]);
       if (!filas.length) break;
       const columnas = Object.keys(filas[0]).map(ident).join(', ');
-      const valores = filas.map((f) => `(${Object.values(f).map((v) => mysql.escape(v)).join(', ')})`).join(',\n  ');
+      const valores = filas.map((f) => `(${Object.values(f).map(literal).join(', ')})`).join(',\n  ');
       await escribir(`INSERT INTO ${ident(tabla)} (${columnas}) VALUES\n  ${valores};\n`);
       if (filas.length < LOTE) break;
     }
+    // Los ids siguen desde el último restaurado.
+    if (pk.length === 1 && pk[0].col === 'id') {
+      await escribir(`SELECT setval(pg_get_serial_sequence('${tabla}', 'id'), COALESCE((SELECT MAX(id) FROM ${ident(tabla)}), 0) + 1, false);\n`);
+    }
   }
 
-  await escribir('\nSET FOREIGN_KEY_CHECKS = 1;\n-- Fin del respaldo\n');
+  await escribir('\nCOMMIT;\n-- Fin del respaldo\n');
 }

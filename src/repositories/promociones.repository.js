@@ -42,7 +42,7 @@ export const promocionesRepo = {
   async findCuponVigente(codigo, fecha) {
     const promo = await sql.get(
       `SELECT * FROM promociones
-        WHERE codigo = ? AND activo = 1 AND tipo_descuento = 'monto'
+        WHERE norm(codigo) = norm(?) AND activo = 1 AND tipo_descuento = 'monto'
           AND (fecha_inicio IS NULL OR fecha_inicio <= ?) AND (fecha_fin IS NULL OR fecha_fin >= ?)
         LIMIT 1`,
       [codigo, fecha, fecha],
@@ -54,7 +54,7 @@ export const promocionesRepo = {
 
   /** ¿Hay otra promoción activa con el mismo código? */
   async codigoEnUso(codigo, excludeId = 0) {
-    return Boolean(await sql.get('SELECT 1 AS x FROM promociones WHERE codigo = ? AND activo = 1 AND id <> ? LIMIT 1', [codigo, excludeId]));
+    return Boolean(await sql.get('SELECT 1 AS x FROM promociones WHERE norm(codigo) = norm(?) AND activo = 1 AND id <> ? LIMIT 1', [codigo, excludeId]));
   },
 
   /** Deshabilita todos los cupones (promociones con código). Devuelve cuántos. */

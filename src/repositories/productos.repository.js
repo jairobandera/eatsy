@@ -67,7 +67,7 @@ export const productosRepo = {
       params.push(activo ? 1 : 0);
     }
     if (buscar) {
-      where.push('p.nombre LIKE ?');
+      where.push('norm(p.nombre) LIKE norm(?)');
       params.push(likePattern(buscar));
     }
     if (categoriaId) {

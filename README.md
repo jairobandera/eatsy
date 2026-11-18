@@ -8,7 +8,7 @@ Migración completa del proyecto Laravel original a:
 |---|---|
 | Frontend | HTML5, CSS3, JavaScript (módulos ES nativos), Bootstrap 5, Bootstrap Icons, SweetAlert2, Chart.js, JsBarcode |
 | Backend | Node.js + Express 5 |
-| Base de datos | MySQL / MariaDB (driver `mysql2`) |
+| Base de datos | PostgreSQL 14+ (driver `pg`), por ejemplo Supabase, en su propio esquema `eatsy` |
 | Tiempo real | **WebSocket implementado a mano** sobre el módulo `http` de Node (RFC 6455, sin librerías) |
 
 Todas las dependencias son gratuitas y de código abierto. Las librerías del frontend se sirven desde `node_modules`, así que **funciona sin internet** dentro del local (solo la tipografía Poppins viene de Google Fonts, con fuente de respaldo).
@@ -17,20 +17,20 @@ Todas las dependencias son gratuitas y de código abierto. Las librerías del fr
 
 ## Puesta en marcha
 
-Requisitos: **Node.js 22.13+** y **MySQL 8 / MariaDB 10.4+** (por ejemplo, el de XAMPP).
+Requisitos: **Node.js 22.13+** y **PostgreSQL 14+** (local o en la nube, por ejemplo un proyecto gratis de [Supabase](https://supabase.com)).
 
 ```bash
 # 1) Instalar dependencias
 npm install
 
-# 2) Configuración (si no existe .env). Por defecto usa root sin contraseña en 127.0.0.1:3306
+# 2) Configuración (si no existe .env): DATABASE_URL o DB_* apuntando a tu PostgreSQL
 cp .env.example .env
 
-# 3) Levantar MySQL (XAMPP → Start MySQL) y arrancar la app
+# 3) Arrancar la app
 npm start
 ```
 
-La primera vez se crea la base `autopedido`, las tablas y los datos iniciales automáticamente.
+La primera vez se crean el esquema `eatsy` (variable `DB_SCHEMA`), las tablas y los datos iniciales automáticamente. Todo queda dentro de ese esquema: la misma base se puede compartir con otros proyectos sin tocar sus tablas (`npm run db:reset` solo borra ese esquema).
 Abrí **http://localhost:3000**.
 
 Comandos útiles:
@@ -74,12 +74,12 @@ Después del primer arranque el modo ya no borra ni agrega nada: cambiar `APP_MO
 
 ## Desplegar en Render
 
-Render no ofrece MySQL, así que la base va en un proveedor aparte. Opción gratuita recomendada: **[Aiven for MySQL](https://aiven.io/mysql)** (plan *Free*, MySQL 8 real).
+La base va en **[Supabase](https://supabase.com)** (PostgreSQL gratis). Puede ser un proyecto que ya uses para otras cosas: la app solo usa su esquema `eatsy`.
 
-1. **Base de datos**: creá el servicio MySQL en Aiven y copiá su *Service URI* (`mysql://avnadmin:CLAVE@HOST:PUERTO/defaultdb?ssl-mode=REQUIRED`).
+1. **Base de datos**: en Supabase → *Connect* → **Session pooler** copiá la cadena (`postgresql://postgres.REF:CLAVE@aws-1-….pooler.supabase.com:5432/postgres`). Usá el *Session pooler* (5432): el *Transaction pooler* (6543) no sirve para esta app (si lo pegás, se cambia solo a 5432). La conexión directa (`db.REF.supabase.co`) es solo IPv6 y Render no la alcanza.
 2. **Web**: en Render → *New → Blueprint* → elegí este repositorio. Toma la configuración de [`render.yaml`](render.yaml).
 3. Completá las variables que pide:
-   - `DATABASE_URL` → la URI del paso 1 (el SSL se activa solo).
+   - `DATABASE_URL` → la cadena del paso 1 con tu contraseña (el SSL se activa solo; la contraseña puede tener símbolos sin escapar).
    - `APP_MODE` → `demo` para mostrarlo con datos de prueba, o `produccion` para el local real.
    - `ADMIN_PASSWORD` → contraseña del administrador (solo modo producción).
    - `KIOSCO_PIN` → PIN para salir del kiosco.
@@ -87,10 +87,10 @@ Render no ofrece MySQL, así que la base va en un proveedor aparte. Opción grat
 
 Tené en cuenta:
 - **Plan gratuito**: el servicio se “duerme” tras 15 minutos sin tráfico y tarda ~1 minuto en despertar. Para evitarlo, creá un cron en **[cron-job.org](https://console.cron-job.org/dashboard)** que haga `GET https://TU-APP.onrender.com/api/health` **cada 10 minutos** (responde `{"ok":true}` al instante, sin tocar la base de datos).
-- **Base gratuita de Aiven**: Aiven apaga los servicios gratis que pasan un tiempo sin actividad (avisa por mail y se vuelven a prender desde la consola; mientras está apagado su dirección no existe y el deploy falla con `ENOTFOUND`). Para evitarlo, agregá un segundo cron a `GET https://TU-APP.onrender.com/api/salud` (por ejemplo cada 30 minutos): esa ruta hace una consulta a MySQL. Además, mientras el servidor está prendido, la app consulta la base sola cada hora (`DB_KEEPALIVE_MINUTOS`, 0 = desactivado).
+- **Supabase gratis**: pausa los proyectos que pasan una semana sin actividad. Para evitarlo, agregá un segundo cron a `GET https://TU-APP.onrender.com/api/salud` (por ejemplo cada 30 minutos): esa ruta hace una consulta a la base. Además, mientras el servidor está prendido, la app consulta la base sola cada hora (`DB_KEEPALIVE_MINUTOS`, 0 = desactivado). La app abre pocas conexiones (`DB_POOL=5`) porque el límite del plan gratis se comparte entre todos los proyectos.
 - **Imágenes subidas desde el panel**: el disco de Render se borra en cada deploy/reinicio, así que las fotos subidas como archivo se pierden. Usá el campo **URL de la imagen** (por ejemplo, fotos alojadas en Cloudinary o Imgur) o agregá un *Render Disk* montado en `uploads/` (plan pago). Las fotos de los productos de demo vienen en el repositorio y no se pierden.
 - `SESSION_SECRET` lo genera Render solo; `TRUST_PROXY=1` y `NODE_ENV=production` ya vienen en el blueprint (cookies seguras por HTTPS).
-- Rutas de salud: `/api/health` (ping liviano para el cron) y `/api/salud` (además verifica la conexión a MySQL; la usa Render como *health check*).
+- Rutas de salud: `/api/health` (ping liviano para el cron) y `/api/salud` (además verifica la conexión a la base; la usa Render como *health check*).
 
 ---
 
@@ -113,7 +113,7 @@ Desde `/superadmin` se configura (todo se aplica al instante):
 
 Sin configuración guardada, la instalación funciona como siempre (Full, sin vencimiento, marca Eatsy). Al guardar, las pantallas abiertas **no se recargan solas** (alguien puede estar cobrando o cargando un pedido): les aparece un cartel *"Hay una actualización de la configuración"* con **Actualizar** y **Más tarde**; con *Más tarde* los cambios se aplican la próxima vez que recarguen (F5). Solo el monitor de **/llamados** se recarga solo.
 
-**Respaldo**: el botón **Descargar respaldo** baja la base completa (estructura + datos) en un archivo `.sql`. Para restaurarlo, en una base vacía: `mysql -u usuario -p nombre_base < respaldo.sql`.
+**Respaldo**: el botón **Descargar respaldo** baja el esquema de la app completo (estructura + datos, sin otros proyectos de la base) en un archivo `.sql`. Para restaurarlo, en una base donde el esquema `eatsy` no exista o esté vacío: `psql "postgresql://…:5432/postgres" -f respaldo.sql`.
 
 **Todas mis instalaciones** (panel central): en la pestaña del mismo nombre cargás las direcciones de tus otras instalaciones y ves de todas el paquete, la licencia, los pedidos y ventas de hoy y del mes, los usuarios y el último pedido, con un botón para entrar a administrarla. Para que se puedan consultar entre sí, definí la **misma** variable `SUPERADMIN_API_KEY` (24 caracteres o más) en todas. Cada instalación responde su estado en `GET /api/superadmin/estado` solo con esa clave (`Authorization: Bearer …`); sin ella, la ruta da 404. Las instalaciones del plan gratis de Render que estén dormidas pueden tardar en contestar: el panel espera hasta 30 s y si no, la marca como "sin respuesta".
 
@@ -202,7 +202,7 @@ AutoPedido2.0/
 ├── src/
 │   ├── app.js                 # Configuración de Express (estáticos, API, páginas, errores)
 │   ├── config/                # Variables de entorno (process.loadEnvFile nativo)
-│   ├── db/                    # Pool MySQL, transacciones, schema.sql, seeders y CLI
+│   ├── db/                    # Pool PostgreSQL (esquema eatsy), traductor de `?`, transacciones, schema.sql, seeders y CLI
 │   ├── repositories/          # Acceso a datos (SQL)
 │   ├── services/              # Reglas de negocio (pedidos, precios, puntos, estadísticas...)
 │   ├── controllers/           # Capa HTTP + validación de entrada

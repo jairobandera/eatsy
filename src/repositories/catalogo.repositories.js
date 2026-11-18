@@ -18,7 +18,7 @@ export const usuariosRepo = {
 
   /** Incluye el hash de la contraseña: solo para autenticación. */
   async findForLogin(nombre) {
-    return toBool(await sql.get('SELECT * FROM usuarios WHERE nombre = ? LIMIT 1', [String(nombre).trim()]), 'activo');
+    return toBool(await sql.get('SELECT * FROM usuarios WHERE norm(nombre) = norm(?) ORDER BY id LIMIT 1', [String(nombre).trim()]), 'activo');
   },
 
   /** Usuarios activos de un rol (para los límites del paquete). */

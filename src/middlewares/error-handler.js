@@ -18,10 +18,11 @@ export function errorHandler(err, req, res, _next) {
   if (err.type === 'entity.parse.failed') {
     return res.status(400).json({ message: 'JSON inválido en el cuerpo de la petición.' });
   }
-  if (err.code === 'ER_DUP_ENTRY') {
+  // 23505 = violación de clave única en PostgreSQL
+  if (err.code === '23505') {
     return res.status(409).json({ message: 'Ya existe un registro con esos datos.' });
   }
-  if (err.code === 'ECONNREFUSED' || err.code === 'ER_ACCESS_DENIED_ERROR') {
+  if (['ECONNREFUSED', 'ENOTFOUND', 'ETIMEDOUT', '28P01', '57P01', '53300'].includes(err.code)) {
     console.error('[db]', err.message);
     return res.status(503).json({ message: 'No hay conexión con la base de datos.' });
   }

@@ -103,7 +103,7 @@ async function attachDetalles(pedidos) {
 
 export const pedidosRepo = {
   async findIdByCodigo(codigo) {
-    const row = await sql.get('SELECT id FROM pedidos WHERE codigo = ?', [codigo]);
+    const row = await sql.get('SELECT id FROM pedidos WHERE codigo = upper(?)', [codigo]);
     return row?.id ?? null;
   },
 
@@ -112,7 +112,7 @@ export const pedidosRepo = {
   },
 
   async findById(id, { withDetalles = true, forUpdate = false } = {}) {
-    const row = await sql.get(`${BASE_SELECT} WHERE p.id = ? ${forUpdate ? 'FOR UPDATE' : ''}`, [id]);
+    const row = await sql.get(`${BASE_SELECT} WHERE p.id = ? ${forUpdate ? 'FOR UPDATE OF p' : ''}`, [id]);
     if (!row) return null;
     const dto = toDto(row);
     return withDetalles ? (await attachDetalles([dto]))[0] : dto;
@@ -156,7 +156,7 @@ export const pedidosRepo = {
     if (mesasAbiertas === 'excluir') where.push(`NOT ${enMesaAbierta}`);
     if (search) {
       const pattern = likePattern(search);
-      where.push(`(p.codigo LIKE ? OR c.cedula LIKE ? OR CONCAT(c.nombre, ' ', c.apellido) LIKE ?)`);
+      where.push(`(norm(p.codigo) LIKE norm(?) OR c.cedula LIKE ? OR norm(CONCAT(c.nombre, ' ', c.apellido)) LIKE norm(?))`);
       params.push(pattern, pattern, pattern);
     }
     const w = where.length ? `WHERE ${where.join(' AND ')}` : '';

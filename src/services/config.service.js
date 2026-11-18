@@ -65,7 +65,7 @@ export async function guardarConfig(secciones) {
   for (const [clave, valor] of Object.entries(secciones)) {
     if (!(clave in DEFAULTS)) continue;
     await sql.run(
-      'INSERT INTO configuracion (clave, valor, updated_at) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE valor = VALUES(valor), updated_at = VALUES(updated_at)',
+      'INSERT INTO configuracion (clave, valor, updated_at) VALUES (?, ?, ?) ON CONFLICT (clave) DO UPDATE SET valor = EXCLUDED.valor, updated_at = EXCLUDED.updated_at',
       [clave, JSON.stringify(valor), ts],
     );
   }

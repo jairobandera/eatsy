@@ -33,36 +33,76 @@ if (!APP_MODES.includes(appMode)) {
   throw new Error(`APP_MODE inválido: "${env.APP_MODE}". Valores posibles: ${APP_MODES.join(', ')}.`);
 }
 
-/** Conexión: DATABASE_URL (mysql://usuario:clave@host:puerto/base) o las variables DB_* sueltas. */
+/** Decodifica %XX de la URL; si la clave tiene un "%" suelto (ej. "ab%tu") se usa tal cual. */
+const decodificar = (s) => {
+  try {
+    return decodeURIComponent(s);
+  } catch {
+    return s;
+  }
+};
+
+/**
+ * Parte postgresql://usuario:clave@host:puerto/base?params a mano (no con `new URL`): así la clave
+ * puede tener @, #, ? o % sin escapar, como las que genera Supabase.
+ */
+export function parsearDatabaseUrl(texto) {
+  const m = String(texto).trim().match(/^postgres(?:ql)?:\/\/([^:@/]*)(?::(.*))?@([^@/?#:]+|\[[^\]]+\])(?::(\d+))?(?:\/([^?#]*))?(?:\?([^#]*))?$/i);
+  if (!m) throw new Error('DATABASE_URL inválida. Formato: postgresql://usuario:clave@host:puerto/base');
+  const [, user, password = '', host, port, database, query = ''] = m;
+  return {
+    host,
+    port: Number(port) || 5432,
+    user: decodificar(user),
+    password: decodificar(password),
+    database: decodificar(database || '') || 'postgres',
+    params: new URLSearchParams(query),
+  };
+}
+
+// Esquemas de Supabase / PostgreSQL que la app nunca debe usar (ni borrar con db:reset).
+const ESQUEMAS_RESERVADOS = ['public', 'auth', 'storage', 'realtime', 'extensions', 'graphql', 'graphql_public', 'pgbouncer', 'vault', 'supabase_migrations', 'supabase_functions', 'information_schema'];
+
+/**
+ * Conexión PostgreSQL: DATABASE_URL (postgresql://usuario:clave@host:puerto/base) o las variables
+ * DB_* sueltas. Las tablas van en el esquema DB_SCHEMA (por defecto "eatsy").
+ */
 function dbConfig() {
   const base = {
     host: env.DB_HOST || '127.0.0.1',
-    port: Number(env.DB_PORT) || 3306,
-    user: env.DB_USER || 'root',
+    port: Number(env.DB_PORT) || 5432,
+    user: env.DB_USER || 'postgres',
     password: env.DB_PASSWORD || '',
-    database: env.DB_NAME || 'autopedido',
+    database: env.DB_NAME || 'postgres',
   };
   let sslDesdeUrl = false;
   if (env.DATABASE_URL) {
-    const url = new URL(env.DATABASE_URL);
-    Object.assign(base, {
-      host: url.hostname,
-      port: Number(url.port) || 3306,
-      user: decodeURIComponent(url.username),
-      password: decodeURIComponent(url.password),
-      database: decodeURIComponent(url.pathname.replace(/^\//, '')) || base.database,
-    });
-    const sslParam = (url.searchParams.get('ssl') ?? url.searchParams.get('ssl-mode') ?? '').toLowerCase();
-    sslDesdeUrl = ['true', 'required', 'verify_ca', 'verify_identity'].includes(sslParam);
+    const { params, ...url } = parsearDatabaseUrl(env.DATABASE_URL);
+    Object.assign(base, url);
+    sslDesdeUrl = ['require', 'verify-ca', 'verify-full', 'true'].includes((params.get('sslmode') ?? params.get('ssl') ?? '').toLowerCase());
   }
-  const ssl = bool(env.DB_SSL) || sslDesdeUrl;
+  const supabase = /\.supabase\.(co|com)$/i.test(base.host);
+  // El pooler de Supabase en modo "transaction" (6543) no conserva el search_path entre consultas:
+  // se usa el modo "session" (5432) del mismo host.
+  if (supabase && base.port === 6543) {
+    console.warn('[db] Supabase: se usa el puerto 5432 (session pooler) en lugar de 6543 (transaction pooler).');
+    base.port = 5432;
+  }
+  const schema = String(env.DB_SCHEMA || 'eatsy').trim().toLowerCase();
+  if (!/^[a-z_][a-z0-9_]{0,62}$/.test(schema) || schema.startsWith('pg_') || ESQUEMAS_RESERVADOS.includes(schema)) {
+    throw new Error(`DB_SCHEMA inválido: "${schema}". Usá un esquema propio de la app, ej. eatsy.`);
+  }
+  const ssl = bool(env.DB_SSL) || sslDesdeUrl || supabase;
   return {
     ...base,
-    connectionLimit: Number(env.DB_POOL) || 10,
-    // Consulta a MySQL cada N minutos para que la base en la nube no se apague por inactividad (0 = no).
+    schema,
+    // Pocas conexiones: en Supabase gratis el límite (≈60) se comparte con los otros proyectos.
+    connectionLimit: Number(env.DB_POOL) || 5,
+    // Consulta a la base cada N minutos para que no se pause por inactividad (0 = no).
     keepaliveMs: (env.DB_KEEPALIVE_MINUTOS === undefined || env.DB_KEEPALIVE_MINUTOS === '' ? 60 : Math.max(0, Number(env.DB_KEEPALIVE_MINUTOS) || 0)) * 60_000,
-    // La mayoría de los MySQL en la nube exigen conexión cifrada.
-    ssl: ssl ? { rejectUnauthorized: !bool(env.DB_SSL_ALLOW_SELF_SIGNED), minVersion: 'TLSv1.2' } : undefined,
+    // Supabase cifra con su propia autoridad certificante: por defecto se cifra sin verificarla
+    // (DB_SSL_VERIFY=true para exigirla, ej. con NODE_EXTRA_CA_CERTS apuntando al certificado).
+    ssl: ssl ? { rejectUnauthorized: bool(env.DB_SSL_VERIFY) } : undefined,
   };
 }
 

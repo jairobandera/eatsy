@@ -5,18 +5,18 @@ import { sql } from '../db/connection.js';
 export const estadisticasRepo = {
   ventasDiarias(desde, hasta) {
     return sql.all(
-      `SELECT DATE_FORMAT(fecha, '%Y-%m-%d') AS fecha, ROUND(SUM(monto), 2) AS total
+      `SELECT to_char(fecha, 'YYYY-MM-DD') AS fecha, ROUND(SUM(monto), 2) AS total
          FROM pagos WHERE estado = 'Completado' AND fecha BETWEEN ? AND ?
-        GROUP BY DATE_FORMAT(fecha, '%Y-%m-%d') ORDER BY 1`,
+        GROUP BY to_char(fecha, 'YYYY-MM-DD') ORDER BY 1`,
       [desde, hasta],
     );
   },
 
   ingresosPorHora(desde, hasta) {
     return sql.all(
-      `SELECT HOUR(fecha) AS hora, ROUND(SUM(monto), 2) AS total
+      `SELECT EXTRACT(HOUR FROM fecha)::int AS hora, ROUND(SUM(monto), 2) AS total
          FROM pagos WHERE estado = 'Completado' AND fecha BETWEEN ? AND ?
-        GROUP BY HOUR(fecha) ORDER BY 1`,
+        GROUP BY 1 ORDER BY 1`,
       [desde, hasta],
     );
   },
@@ -62,11 +62,11 @@ export const estadisticasRepo = {
       ),
       sql.get(
         `SELECT COUNT(*) AS total,
-                COALESCE(SUM(estado IN ('Entregado', 'En Mesa')), 0) AS entregados,
-                COALESCE(SUM(estado = 'Cancelado'), 0) AS cancelados,
-                COALESCE(SUM(origen = 'Kiosco'), 0) AS kiosco,
-                COALESCE(SUM(origen = 'Caja'), 0) AS caja,
-                COALESCE(SUM(origen = 'Mozo'), 0) AS mozo
+                COUNT(*) FILTER (WHERE estado IN ('Entregado', 'En Mesa')) AS entregados,
+                COUNT(*) FILTER (WHERE estado = 'Cancelado') AS cancelados,
+                COUNT(*) FILTER (WHERE origen = 'Kiosco') AS kiosco,
+                COUNT(*) FILTER (WHERE origen = 'Caja') AS caja,
+                COUNT(*) FILTER (WHERE origen = 'Mozo') AS mozo
            FROM pedidos WHERE created_at BETWEEN ? AND ?`,
         [desde, hasta],
       ),

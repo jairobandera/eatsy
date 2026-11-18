@@ -1,5 +1,5 @@
 # Despliegue en Render (https://render.com), "New > Blueprint" y elegí este repositorio.
-# La base de datos MySQL va aparte (Render no ofrece MySQL administrado): ver README -> "Desplegar en Render".
+# La base de datos PostgreSQL va aparte (Supabase, esquema "eatsy"): ver README -> "Desplegar en Render".
 services:
   - type: web
     name: eatsy
@@ -20,7 +20,7 @@ services:
         value: "1"
       - key: APP_TIMEZONE
         value: America/Montevideo
-      # mysql://usuario:clave@host:puerto/base  (te lo da el proveedor de MySQL)
+      # Supabase -> Connect -> Session pooler: postgresql://postgres.REF:CLAVE@aws-1-….pooler.supabase.com:5432/postgres
       - key: DATABASE_URL
         sync: false
       - key: DB_SSL

@@ -25,7 +25,7 @@ export const mesasRepo = {
 
   /** Mesa abierta con ese número (de cualquier mozo). forUpdate: bloquea dentro de una transacción. */
   async findAbiertaPorNumero(numero, { forUpdate = false } = {}) {
-    return toDto(await sql.get(`${SELECT} WHERE m.numero = ? AND m.cerrada_at IS NULL ORDER BY m.id LIMIT 1 ${forUpdate ? 'FOR UPDATE' : ''}`, [numero]));
+    return toDto(await sql.get(`${SELECT} WHERE m.numero = ? AND m.cerrada_at IS NULL ORDER BY m.id LIMIT 1 ${forUpdate ? 'FOR UPDATE OF m' : ''}`, [numero]));
   },
 
   async findById(id) {

@@ -34,7 +34,7 @@ export function createRepository({ table, select = '*', defaultOrder = 'nombre A
         params.push(activo ? 1 : 0);
       }
       if (buscar) {
-        where.push('nombre LIKE ?');
+        where.push('norm(nombre) LIKE norm(?)');
         params.push(likePattern(buscar));
       }
       const w = where.length ? `WHERE ${where.join(' AND ')}` : '';
@@ -44,10 +44,10 @@ export function createRepository({ table, select = '*', defaultOrder = 'nombre A
       return { rows: rows.map(map), total: Number(total) };
     },
 
-    /** ¿Existe otro registro con el mismo nombre? (la colación ignora mayúsculas y tildes) */
+    /** ¿Existe otro registro con el mismo nombre? (sin distinguir mayúsculas ni tildes) */
     async existsByName(nombre, { excludeId = 0, onlyActive = false } = {}) {
       const row = await sql.get(
-        `SELECT 1 AS x FROM ${table} WHERE nombre = ? AND id <> ? ${onlyActive ? 'AND activo = 1' : ''} LIMIT 1`,
+        `SELECT 1 AS x FROM ${table} WHERE norm(nombre) = norm(?) AND id <> ? ${onlyActive ? 'AND activo = 1' : ''} LIMIT 1`,
         [String(nombre).trim(), excludeId],
       );
       return Boolean(row);

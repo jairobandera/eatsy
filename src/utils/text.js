@@ -8,8 +8,8 @@ export function normalize(value) {
 }
 
 /**
- * Patrón para LIKE '%texto%' escapando comodines. En MySQL el escape por defecto es "\".
- * La colación utf8mb4_unicode_ci ya ignora mayúsculas y tildes.
+ * Patrón para LIKE '%texto%' escapando comodines. El escape por defecto de PostgreSQL es "\".
+ * Para ignorar mayúsculas y tildes las consultas comparan norm(columna) LIKE norm(?).
  */
 export function likePattern(value) {
   return `%${String(value ?? '').trim().replace(/[\\%_]/g, (c) => `\\${c}`)}%`;

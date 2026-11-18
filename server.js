@@ -12,8 +12,8 @@ async function main() {
   try {
     await initDatabase();
   } catch (err) {
-    console.error(`\n✖ No se pudo conectar a MySQL en ${config.db.host}:${config.db.port} (${err.code || err.message}).`);
-    console.error('  Verificá que MySQL/MariaDB esté corriendo (XAMPP → Start MySQL) y los datos DB_* / DATABASE_URL.\n');
+    console.error(`\n✖ No se pudo preparar la base PostgreSQL en ${config.db.host}:${config.db.port} (esquema ${config.db.schema}): ${err.code || ''} ${err.message}`);
+    console.error('  Verificá que PostgreSQL esté accesible y los datos DATABASE_URL / DB_*.\n');
     if (config.db.ssl === undefined && config.isProduction) console.error('  En la nube casi siempre hace falta DB_SSL=true.\n');
     process.exit(1);
   }
@@ -29,7 +29,7 @@ async function main() {
   const cfg = await cargarConfig();
   console.log(`• Paquete ${cfg.paquete.tipo.toUpperCase()} · ${cfg.negocio.nombre}${config.superadmin ? ' · superadmin habilitado' : ''}`);
 
-  // Mantiene activa la base (los MySQL gratuitos en la nube se apagan si no tienen actividad).
+  // Mantiene activa la base (las bases gratuitas en la nube se pausan si no tienen actividad).
   iniciarLatido();
 
   const app = createApp();
