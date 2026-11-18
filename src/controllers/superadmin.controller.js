@@ -63,6 +63,8 @@ async function resumen() {
     usuarios: await usuariosRepo.resumenPorRol(),
     licencia: estadoLicencia(cfg),
     defaults: DEFAULTS,
+    // Las otras instalaciones, para elegir cuál administrar desde esta pantalla.
+    instalaciones: (cfg.instalaciones?.lista || []).map(({ nombre, url }) => ({ nombre, url })),
   };
 }
 

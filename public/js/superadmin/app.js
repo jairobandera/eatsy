@@ -33,6 +33,11 @@ const ESTADO_LICENCIA = {
 let datos = null;
 const COLOR_EATSY = '#ff5722'; // color por defecto de la marca
 let pestana = 'config';
+// Instalación que se está administrando: null = esta; un número = posición en la lista de las otras.
+let destino = null;
+let otras = [];
+const baseApi = () => (destino === null ? '/superadmin' : `/superadmin/remota/${destino}`);
+const urlDestino = () => (destino === null ? '' : otras[destino]?.url || '');
 
 function render() {
   const { config: c, usuarios, licencia } = datos;
@@ -44,8 +49,8 @@ function render() {
         <p class="text-muted small mb-0">Solo vos ves esta pantalla. Los cambios aplican al instante en todas las pantallas del negocio.</p>
       </div>
       <div class="d-flex flex-wrap gap-2">
-        <a class="btn btn-outline-primary rounded-pill" href="/api/superadmin/respaldo" download title="Base completa en un archivo .sql"><i class="bi bi-database-down me-1"></i>Descargar respaldo</a>
-        <a class="btn btn-outline-secondary rounded-pill" href="/admin"><i class="bi bi-box-arrow-up-right me-1"></i>Ir al panel del negocio</a>
+        <a class="btn btn-outline-primary rounded-pill" href="/api${baseApi()}/respaldo" download title="Base completa en un archivo .sql"><i class="bi bi-database-down me-1"></i>Descargar respaldo</a>
+        <a class="btn btn-outline-secondary rounded-pill" href="${urlDestino()}/admin" ${destino === null ? '' : raw('target="_blank" rel="noopener"')}><i class="bi bi-box-arrow-up-right me-1"></i>Ir al panel del negocio</a>
       </div>
     </div>
 
@@ -57,6 +62,19 @@ function render() {
     <div id="pane-instalaciones" ${pestana === 'instalaciones' ? '' : 'hidden'}></div>
 
     <form id="form" novalidate ${pestana === 'config' ? '' : 'hidden'}>
+      <section class="card-app sa-card mb-3 ${destino === null ? '' : 'border border-2 border-primary'}">
+        <div class="d-flex flex-wrap align-items-center gap-2">
+          <label class="fw-medium mb-0" for="destino"><i class="bi bi-buildings me-1"></i>Negocio a administrar</label>
+          <select class="form-select" id="destino" style="max-width: 420px">
+            <option value="">Esta instalación (${location.host})</option>
+            ${otras.map((o, i) => html`<option value="${i}" ${raw(destino === i ? 'selected' : '')}>${o.nombre || o.url} — ${o.url.replace(/^https?:\/\//, '')}</option>`)}
+          </select>
+          ${destino === null ? '' : html`<a class="btn btn-sm btn-outline-primary rounded-pill" href="${urlDestino()}" target="_blank" rel="noopener"><i class="bi bi-box-arrow-up-right me-1"></i>Abrir</a>`}
+        </div>
+        ${destino === null
+          ? (otras.length ? '' : html`<div class="form-text">Los negocios que agregues en <b>Todas mis instalaciones</b> (o que cree el panel de Kairos) aparecen acá para administrarlos.</div>`)
+          : html`<div class="form-text text-primary">Estás cambiando la configuración de <b>${otras[destino]?.nombre || urlDestino()}</b>. Los cambios se aplican en ese negocio.</div>`}
+      </section>
       <div class="row g-3">
         <div class="col-lg-6">
           <section class="card-app sa-card h-100">
@@ -118,7 +136,7 @@ function render() {
             </div>
             <label class="form-label fw-medium">Logo</label>
             <div class="d-flex align-items-center gap-3">
-              <div class="logo-preview"><img src="/negocio/logo?t=${Date.now()}" alt="Logo"></div>
+              <div class="logo-preview"><img src="${urlDestino()}/negocio/logo?t=${Date.now()}" alt="Logo"></div>
               <div class="d-flex flex-column gap-2">
                 <label class="btn btn-sm btn-outline-primary rounded-pill mb-0"><i class="bi bi-upload me-1"></i>Subir logo<input type="file" id="n-logo" accept="image/png,image/jpeg,image/webp,image/gif" hidden></label>
                 ${c.negocio.tiene_logo ? html`<button type="button" class="btn btn-sm btn-outline-danger rounded-pill" id="quitar-logo"><i class="bi bi-x-lg me-1"></i>Usar el de Eatsy</button>` : ''}
@@ -203,6 +221,7 @@ function render() {
     actualizarColor();
     toast('Color de Eatsy elegido: tocá Guardar cambios para aplicarlo', 'info', { timer: 3500 });
   });
+  form.querySelector('#destino').addEventListener('change', (e) => elegirDestino(e.target.value === '' ? null : Number(e.target.value)));
   form.querySelector('#n-logo').addEventListener('change', subirLogo);
   form.querySelector('#quitar-logo')?.addEventListener('click', quitarLogo);
   form.addEventListener('submit', guardar);
@@ -228,7 +247,7 @@ async function guardar(e) {
   if (!body.negocio.nombre) return showError(new Error('Ingresá el nombre del negocio.'));
   await withLoading(app.querySelector('#guardar'), async () => {
     try {
-      datos = await api.put('/superadmin', body);
+      datos = await api.put(baseApi(), body);
       toast('Configuración guardada', 'success', datos.cupones_deshabilitados ? { text: `Se deshabilitaron ${datos.cupones_deshabilitados} cupón(es) con código.` } : {});
       render();
     } catch (err) {
@@ -243,7 +262,7 @@ async function subirLogo(e) {
   const fd = new FormData();
   fd.append('logo', file);
   try {
-    datos = await api.post('/superadmin/logo', fd);
+    datos = await api.post(`${baseApi()}/logo`, fd);
     toast('Logo actualizado');
     render();
   } catch (err) {
@@ -253,11 +272,27 @@ async function subirLogo(e) {
 
 async function quitarLogo() {
   try {
-    datos = await api.delete('/superadmin/logo');
+    datos = await api.delete(`${baseApi()}/logo`);
     toast('Se usa el logo de Eatsy');
     render();
   } catch (err) {
     showError(err);
+  }
+}
+
+/** Cambia el negocio que se administra en la pestaña de configuración. */
+async function elegirDestino(n) {
+  const anterior = destino;
+  destino = n;
+  pestana = 'config';
+  app.querySelector('#form')?.querySelectorAll('input, select, button').forEach((el) => { el.disabled = true; });
+  try {
+    datos = await api.get(baseApi());
+    render();
+  } catch (err) {
+    destino = anterior;
+    showError(err, 'No se pudo abrir ese negocio');
+    render();
   }
 }
 
@@ -271,7 +306,7 @@ const tarjetaLicencia = (lic) => {
   return html`<span class="${cls} fw-semibold">${texto.split(':')[0]}</span><span class="text-muted">${vence}</span>`;
 };
 
-function filaInstalacion(i) {
+function filaInstalacion(i, pos) {
   const e = i.estado;
   if (!i.ok) {
     return html`<tr class="table-light">
@@ -288,7 +323,10 @@ function filaInstalacion(i) {
     <td class="small text-nowrap">${e.hoy.pedidos} pedidos<div class="text-muted">${money(e.hoy.ventas)}</div></td>
     <td class="small text-nowrap">${e.mes.pedidos} pedidos<div class="text-muted">${money(e.mes.ventas)}</div></td>
     <td class="small">${usuarios || '—'}<div class="text-muted">Último pedido: ${e.ultimo_pedido ? e.ultimo_pedido.slice(0, 16) : '—'}${e.version ? ` · v${e.version}` : ''}</div></td>
-    <td class="text-end text-nowrap"><a class="btn btn-sm btn-outline-primary rounded-pill" href="${i.propia ? '/superadmin' : `${i.url}/login`}" ${i.propia ? '' : raw('target="_blank" rel="noopener"')}>${i.propia ? 'Estás acá' : 'Administrar'}</a></td>
+    <td class="text-end text-nowrap">${i.propia
+      ? html`<button type="button" class="btn btn-sm btn-outline-primary rounded-pill" data-administrar="">Administrar</button>`
+      : html`<button type="button" class="btn btn-sm btn-outline-primary rounded-pill" data-administrar="${pos - 1}">Administrar</button>
+        <a class="btn btn-sm btn-outline-secondary rounded-pill" href="${i.url}/login" target="_blank" rel="noopener" title="Abrir el sitio"><i class="bi bi-box-arrow-up-right"></i></a>`}</td>
   </tr>`;
 }
 
@@ -314,9 +352,12 @@ function renderInstalaciones() {
     ${editando ? editorInstalaciones() : ''}
     <div class="table-wrap"><div class="table-responsive"><table class="table table-app align-middle mb-0">
       <thead><tr><th>Negocio</th><th>Paquete</th><th>Licencia</th><th>Hoy</th><th>Este mes</th><th>Usuarios</th><th></th></tr></thead>
-      <tbody>${todas.map(filaInstalacion)}</tbody>
+      <tbody>${todas.map((i, pos) => filaInstalacion(i, pos))}</tbody>
     </table></div></div>`.toString();
 
+  pane.querySelectorAll('[data-administrar]').forEach((b) => {
+    b.onclick = () => elegirDestino(b.dataset.administrar === '' ? null : Number(b.dataset.administrar));
+  });
   pane.querySelector('#inst-recargar').onclick = () => cargarInstalaciones({ forzar: true });
   pane.querySelector('#inst-editar').onclick = () => {
     editando = !editando;
@@ -349,12 +390,24 @@ function editorInstalaciones() {
   </form>`;
 }
 
+/** La lista del selector sigue a la de "Todas mis instalaciones". */
+function sincronizarOtras() {
+  otras = panel.instalaciones.map(({ nombre, url }) => ({ nombre, url }));
+  if (destino !== null && destino >= otras.length) destino = null;
+  const sel = app.querySelector('#destino');
+  if (sel) {
+    sel.innerHTML = [`<option value="">Esta instalación (${escapeHtml(location.host)})</option>`,
+      ...otras.map((o, i) => `<option value="${i}" ${destino === i ? 'selected' : ''}>${escapeHtml(o.nombre || o.url)} — ${escapeHtml(o.url.replace(/^https?:\/\//, ''))}</option>`)].join('');
+  }
+}
+
 async function cargarInstalaciones({ forzar = false } = {}) {
   if (panel && !forzar) return renderInstalaciones();
   panel = null;
   renderInstalaciones();
   try {
     panel = await api.get('/superadmin/instalaciones');
+    sincronizarOtras();
     renderInstalaciones();
   } catch (err) {
     app.querySelector('#pane-instalaciones').innerHTML = `<div class="text-danger">${escapeHtml(err.message)}</div>`;
@@ -372,6 +425,7 @@ async function guardarInstalaciones(e) {
       panel = null;
       renderInstalaciones();
       panel = await api.put('/superadmin/instalaciones', { lista });
+      sincronizarOtras();
       editando = false;
       toast('Lista de instalaciones guardada');
       renderInstalaciones();
@@ -384,6 +438,7 @@ async function guardarInstalaciones(e) {
 
 try {
   datos = await api.get('/superadmin');
+  otras = datos.instalaciones || [];
   render();
 } catch (err) {
   app.innerHTML = `<div class="text-danger">${escapeHtml(err.message)}</div>`;

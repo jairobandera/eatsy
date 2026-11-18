@@ -94,6 +94,54 @@ async function consultar(item) {
   }
 }
 
+/**
+ * Reenvía un pedido del superadmin a otra instalación de la lista (solo a las guardadas: nunca a
+ * una dirección arbitraria) con la clave compartida, y devuelve su respuesta tal cual.
+ */
+export async function reenviarARemota(req, res, subruta) {
+  const item = (obtenerConfig().instalaciones.lista || [])[Number(req.params.n)];
+  if (!/^\d+$/.test(req.params.n) || !item) return res.status(404).json({ message: 'Esa instalación no está en tu lista.' });
+  if (!config.superadminApiKey) return res.status(409).json({ message: 'Falta configurar SUPERADMIN_API_KEY en esta instalación.' });
+
+  const headers = { Authorization: `Bearer ${config.superadminApiKey}`, 'X-Requested-With': 'fetch', Accept: 'application/json' };
+  let body;
+  if (req.file) {
+    body = new FormData();
+    body.append('logo', new Blob([req.file.buffer], { type: req.file.mimetype }), req.file.originalname || 'logo');
+  } else if (req.method === 'PUT') {
+    headers['Content-Type'] = 'application/json';
+    body = JSON.stringify(req.body ?? {});
+  }
+
+  let r;
+  try {
+    r = await fetch(`${item.url}/api/superadmin${subruta}`, {
+      method: req.method,
+      headers,
+      body,
+      // El respaldo puede tardar; lo demás tiene el mismo margen que el panel.
+      signal: subruta === '/respaldo' ? undefined : AbortSignal.timeout(TIMEOUT_MS),
+    });
+  } catch (err) {
+    const msg = err.name === 'TimeoutError' ? 'La instalación no respondió a tiempo. Probá de nuevo en un minuto.' : 'No se pudo conectar con la instalación.';
+    return res.status(502).json({ message: msg });
+  }
+  if (r.status === 404) {
+    return res.status(502).json({ message: 'La instalación no aceptó el pedido: revisá que tenga la misma SUPERADMIN_API_KEY y la versión nueva (redesplegala).' });
+  }
+  // Un 401 de la otra instalación no es tu sesión: no tiene que cerrarla acá.
+  res.status(r.status === 401 ? 502 : r.status);
+  for (const h of ['content-type', 'content-disposition']) if (r.headers.get(h)) res.set(h, r.headers.get(h));
+  if (!r.body) return res.end();
+  const lector = r.body.getReader();
+  for (;;) {
+    const { done, value } = await lector.read();
+    if (done) break;
+    if (!res.write(value)) await new Promise((ok) => res.once('drain', ok));
+  }
+  res.end();
+}
+
 /** Estado de esta instalación y de todas las guardadas, en paralelo. */
 export async function panelInstalaciones() {
   const lista = obtenerConfig().instalaciones.lista || [];
