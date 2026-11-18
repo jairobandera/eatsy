@@ -40,29 +40,5 @@ form.addEventListener('submit', async (e) => {
   });
 });
 
-// En modo demo mostramos los usuarios de prueba (un toque completa el formulario).
-const DEMO_USERS = [
-  ['Admin', 'Administración'],
-  ['Cajero1', 'Caja'],
-  ['Cocina1', 'Cocina'],
-  ['Kiosco1', 'Kiosco'],
-  ['Mozo1', 'Mozo'],
-];
-api
-  .get('/auth/info')
-  .then(({ modo }) => {
-    if (modo !== 'demo') return;
-    const box = document.getElementById('demo-users');
-    box.innerHTML = DEMO_USERS.map(
-      ([u, label]) => `<button type="button" class="btn btn-sm btn-outline-dark rounded-pill" data-user="${u}">${label} <small class="text-muted">(${u})</small></button>`,
-    ).join('');
-    box.addEventListener('click', (e) => {
-      const b = e.target.closest('[data-user]');
-      if (!b) return;
-      form.nombre.value = b.dataset.user;
-      pass.value = '123456789';
-      form.requestSubmit();
-    });
-    document.getElementById('demo-info').classList.remove('d-none');
-  })
-  .catch(() => {});
+// Los usuarios de demo ya no se muestran en el login: están publicados en la página del producto
+// (pckairos.cloud/eatsy).
